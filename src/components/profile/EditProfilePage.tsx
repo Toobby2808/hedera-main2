@@ -8,7 +8,7 @@ const EditProfilePage = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAuthContext();
 
-  const { name } = user;
+  const name = user?.name || "";
 
   const [formData, setFormData] = useState({
     name: user?.name || "",
