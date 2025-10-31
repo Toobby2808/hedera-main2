@@ -17,8 +17,6 @@ import Screen7 from "./onboarding/screen7";
 
 import AppLayout from "./layouts/AppLayout";
 
-import TestAPI from "./pages/TestApi";
-
 import TransactionsPage from "./components/transactions/TransactionsPage";
 import BookRidePage from "./pages/app/bookride/BookRidePage";
 import AvailableRides from "./pages/app/bookride/AvailableRides";
@@ -44,22 +42,6 @@ function App() {
     warmUp();
   }, []);
   return (
-    // <Provider store={store}>
-    //   <BrowserRouter>
-    //     <Routes>
-    //       {/* Onboarding flow */}
-    //       <Route path="/" element={<Screen1 />} />
-    //       <Route path="/welcome" element={<Screen2 />} />
-    //       {/* <Route path="/auth" element={<AuthScreen />} /> */}
-    //       {/* <Route path="/verify-code" element={<Screen4 />} /> */}
-    //       <Route path="/signup" element={<Screen5 />} />
-    //       <Route path="/login" element={<Screen6 />} />
-    //       <Route path="/success" element={<Screen7 />} />
-
-    //       <Route path="*" element={<Navigate to="/" replace />} />
-    //     </Routes>
-    //   </BrowserRouter>
-
     // </Provider>
     <Provider store={store}>
       <BrowserRouter>
@@ -72,8 +54,6 @@ function App() {
           <Route path="/signup" element={<Screen5 />} />
           <Route path="/login" element={<Screen6 />} />
           <Route path="/success" element={<Screen7 />} />
-
-          <Route path="/test" element={<TestAPI />} />
 
           <Route path="/book-ride" element={<BookRidePage />} />
           <Route path="/available-rides" element={<AvailableRides />} />
