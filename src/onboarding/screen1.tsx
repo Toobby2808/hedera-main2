@@ -1,4 +1,4 @@
-import Image1 from "../assets/images-and-icons/logo1.png";
+import Image1 from "../assets/images-and-icons/hedera23.svg";
 import Onboarding from "./shared/hero";
 
 import { useNavigate } from "react-router-dom";

@@ -17,8 +17,6 @@ import Screen7 from "./onboarding/screen7";
 
 import AppLayout from "./layouts/AppLayout";
 
-import TestAPI from "./pages/TestApi";
-
 import TransactionsPage from "./components/transactions/TransactionsPage";
 import BookRidePage from "./pages/app/bookride/BookRidePage";
 import AvailableRides from "./pages/app/bookride/AvailableRides";
@@ -75,8 +73,6 @@ function App() {
           <Route path="/signup" element={<Screen5 />} />
           <Route path="/login" element={<Screen6 />} />
           <Route path="/success" element={<Screen7 />} />
-
-          <Route path="/test" element={<TestAPI />} />
 
           <Route path="/book-ride" element={<BookRidePage />} />
           <Route path="/available-rides" element={<AvailableRides />} />

@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { backarrow } from "../assets/images";
 import Back from "./shared/back";
-import { goggleicon } from "../assets/images";
+// import { goggleicon } from "../assets/images";
 import { hederalogo } from "../assets/images";
-import { emailicon } from "../assets/images";
-import { passwordicon } from "../assets/images";
+
+import { RiEyeOffFill, RiEyeFill, RiMailFill } from "react-icons/ri";
 
 import { useAuthContext } from "../context/AuthContext";
 
@@ -17,6 +17,7 @@ export default function Screen6() {
   // Form state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // UI state
   const [error, setError] = useState("");
@@ -147,11 +148,11 @@ export default function Screen6() {
     }
   };
 
-  const handleGoogleSignIn = () => {
+  /* const handleGoogleSignIn = () => {
     console.log("Google sign-in clicked");
     setError("Google sign-in is not yet implemented");
   };
-
+ */
   const handleHederaSignIn = () => {
     console.log("Hedera sign-in clicked");
     setError("Hedera sign-in is not yet implemented");
@@ -196,15 +197,15 @@ export default function Screen6() {
               className="w-full p-4 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               disabled={isLoading}
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2">
-              <img src={emailicon} alt="email icon" className="w-5 h-5" />
+            <span className="absolute text-pri right-4 top-1/2 -translate-y-1/2">
+              <RiMailFill size={25} />
             </span>
           </div>
 
           {/* Password Input */}
           <div className="relative w-full">
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               name="password"
               id="password"
               value={password}
@@ -221,8 +222,15 @@ export default function Screen6() {
                 }
               }}
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2">
-              <img src={passwordicon} alt="password icon" className="w-5 h-5" />
+            <span
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-4 top-1/2 text-pri -translate-y-1/2"
+            >
+              {showPassword ? (
+                <RiEyeOffFill className="w-5 h-5 cursor-pointer" />
+              ) : (
+                <RiEyeFill className="w-5 h-5 cursor-pointer" />
+              )}
             </span>
           </div>
 
@@ -273,7 +281,7 @@ export default function Screen6() {
         </button>
 
         {/* Google Button */}
-        <button
+        {/* <button
           onClick={handleGoogleSignIn}
           disabled={isLoading}
           className="bg-white mb-2 flex items-center justify-center gap-4 text-xl w-full p-4 font-semibold text-black rounded-full border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50"
@@ -282,7 +290,7 @@ export default function Screen6() {
             <img src={goggleicon} alt="Google logo" />
           </span>
           Continue with Google
-        </button>
+        </button> */}
       </div>
 
       {/* Register Link */}
