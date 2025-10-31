@@ -7,8 +7,12 @@ import { hederalogo } from "../assets/images";
 import { emailicon } from "../assets/images";
 import { passwordicon } from "../assets/images";
 
+import { useAuthContext } from "../context/AuthContext";
+
 export default function Screen6() {
   const navigate = useNavigate();
+
+  const { setUser, setToken } = useAuthContext();
 
   // Form state
   const [email, setEmail] = useState("");
@@ -42,6 +46,7 @@ export default function Screen6() {
   };
 
   // LOGIN FUNCTION
+
   const handleLogin = async () => {
     console.log("=== Starting Login ===");
 
@@ -55,8 +60,6 @@ export default function Screen6() {
       return;
     }
 
-    console.log("Form validation passed");
-    console.log("Email:", email);
     setIsLoading(true);
 
     try {
@@ -64,8 +67,6 @@ export default function Screen6() {
         email: email.trim().toLowerCase(),
         password: password,
       };
-
-      console.log("Calling /login/ endpoint...");
 
       const response = await fetch("https://team-7-api.onrender.com/login/", {
         method: "POST",
@@ -75,81 +76,64 @@ export default function Screen6() {
         body: JSON.stringify(requestBody),
       });
 
-      console.log("Response status:", response.status);
-
       if (!response.ok) {
-        let errorMessage = "Login failed. Please check your credentials.";
-
-        try {
-          const errorData = await response.json();
-          console.error("Error response:", errorData);
-
-          // Handle specific error messages
-          errorMessage =
-            errorData.message ||
-            errorData.error ||
-            errorData.detail ||
-            errorMessage;
-
-          // Provide user-friendly messages for common errors
-          if (response.status === 401 || response.status === 403) {
-            errorMessage = "Invalid email or password. Please try again.";
-          } else if (response.status === 404) {
-            errorMessage = "Account not found. Please register first.";
-          }
-        } catch (e) {
-          console.error("Could not parse error response");
-        }
-
-        throw new Error(errorMessage);
+        const errorData = await response.json().catch(() => ({}));
+        let message =
+          errorData.detail ||
+          errorData.error ||
+          "Login failed. Please check your credentials.";
+        throw new Error(message);
       }
 
       const data = await response.json();
-      console.log("Login successful!", data);
+      console.log("Login successful:", data);
 
-      // Store the authentication token and user data
-      if (data.token || data.access_token || data.authToken) {
-        const token = data.token || data.access_token || data.authToken;
-        localStorage.setItem("authToken", token);
-        console.log("Stored auth token");
+      // ✅ Extract token safely
+      const token =
+        data.access ||
+        data.token ||
+        data.access_token ||
+        data.authToken ||
+        (data.user && data.user.token);
+
+      if (!token) throw new Error("No token returned from backend.");
+
+      // ✅ Save token to localStorage + context
+      localStorage.setItem("authToken", token);
+      setToken(token);
+
+      // ✅ Fetch latest backend profile immediately
+      const profileResponse = await fetch(
+        "https://team-7-api.onrender.com/profile",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!profileResponse.ok) {
+        throw new Error("Failed to fetch user profile after login.");
       }
 
-      if (data.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
-        console.log("Stored user data");
-      } else {
-        // If the entire response is the user data
-        localStorage.setItem("user", JSON.stringify(data));
-      }
+      const profileData = await profileResponse.json();
+      console.log("Fetched profile data:", profileData);
 
-      // Store email for convenience
-      localStorage.setItem("userEmail", email);
+      // ✅ Save latest user info in context and localStorage
+      setUser(profileData);
+      localStorage.setItem("user", JSON.stringify(profileData));
 
       setSuccess("Login successful! Redirecting...");
 
-      // Redirect after short delay to show success message
-      setSuccess("Login successful! Redirecting...");
-
+      // ✅ Redirect after delay
       setTimeout(() => {
-        navigate("/dashboard"); // <-- Move to Screen7
+        navigate("/dashboard");
         setEmail("");
         setPassword("");
-      }, 1500);
+      }, 1000);
     } catch (err) {
       console.error("Login error:", err);
-
-      if (err instanceof TypeError && err.message.includes("fetch")) {
-        setError("Network error. Please check your internet connection.");
-      } else {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Something went wrong. Please try again."
-        );
-      }
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setIsLoading(false);
-      console.log("=== Login Complete ===");
     }
   };
 
@@ -166,7 +150,7 @@ export default function Screen6() {
   const handleRegisterClick = () => {
     console.log("Register clicked");
     // Navigate to registration screen
-    // window.location.href = "/register";
+    window.location.href = "/signup";
   };
 
   return (

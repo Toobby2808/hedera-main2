@@ -21,8 +21,6 @@ const ProfileHeader = () => {
 
   if (!user) return null;
 
-  const initial = user?.name?.charAt(0)?.toUpperCase() || "?";
-
   return (
     <>
       {/* ---------- Profile Header ---------- */}
@@ -43,20 +41,24 @@ const ProfileHeader = () => {
         {/* Top Section */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            {user.profilePic ? (
+            {user.profile_image ? (
               <img
-                src={user.profilePic}
+                src={user.profile_image}
                 alt={user.name}
                 className="w-17 h-17 rounded-full object-cover border-4 border-white shadow"
               />
             ) : (
               <div className="w-17 h-17 rounded-full bg-pri flex items-center justify-center text-white text-3xl font-bold border-2 border-white shadow">
-                {initial}
+                {user?.first_name?.charAt(0).toUpperCase() ||
+                  user?.username?.charAt(0).toUpperCase() ||
+                  "?"}
               </div>
             )}
 
             <div>
-              <h2 className="text-xl font-semibold">{user.name}</h2>
+              <h2 className="text-xl font-semibold">
+                {user?.first_name || user.last_name || user.username}
+              </h2>
               <p className="text-gray-600 text-sm font-medium">{user.email}</p>
               {user.username && (
                 <p className="text-gray-500 text-sm">@{user.username}</p>

@@ -13,25 +13,20 @@ import Book from "../assets/home-icons/book.svg";
 import Task from "../assets/home-icons/task.svg";
 import { transactions } from "../transactions";
 import { useAuthContext } from "../context/AuthContext";
+import QRScannerModal from "../components/QRScannerModal";
 
 import TransactionsPreview from "../components/transactions/TransactionsPreview";
 
 const Dashboard = () => {
   const { user } = useAuthContext();
+  const navigate = useNavigate();
 
   if (!user) {
-    return (
-      <div className="h-screen flex items-center justify-center text-gray-700 ">
-        Loading user data...
-      </div>
-    );
+    return navigate("/login");
   }
-
-  const { name, profilePic, username } = user;
 
   const balance = `${user.walletBalance || "0.00"}`;
 
-  const navigate = useNavigate();
   // UI STATES
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [currency, setCurrency] = useState("USD");
@@ -39,6 +34,7 @@ const Dashboard = () => {
   const [showCurrencyMenu, setShowCurrencyMenu] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   const toggleBalance = () => setBalanceVisible((s) => !s);
   const toggleCurrencyMenu = () => setShowCurrencyMenu((s) => !s);
@@ -70,21 +66,25 @@ const Dashboard = () => {
           {" "}
           <div className="flex items-center gap-3">
             {/* Avatar Section */}
-            {profilePic ? (
+            {user?.profile_image ? (
               <img
-                src={profilePic}
+                src={user.profile_image}
                 alt="User avatar"
-                className="w-10 h-10 rounded-full object-cover border-2 border-green-500"
+                className="w-12 h-12 rounded-full object-cover border-2 border-green-500"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-pri/10 border border-pri flex items-center justify-center text-pri text-3xl font-semibold">
-                {name ? name.charAt(0).toUpperCase() : "U"}
+              <div className="w-12 h-12 rounded-full bg-pri flex items-center justify-center text-white text-3xl font-bold border-2 border-white shadow">
+                {user?.first_name?.charAt(0).toUpperCase() ||
+                  user?.username?.charAt(0).toUpperCase() ||
+                  "?"}
               </div>
             )}
             <div>
               {" "}
-              <div className="font-bold text-black ">{name}</div>{" "}
-              <div className="text-xs text-gray-500">@{username}</div>{" "}
+              <div className="font-bold text-black ">
+                {user?.first_name || user.last_name || user.username}
+              </div>{" "}
+              <div className="text-xs text-gray-500">@{user.username}</div>{" "}
             </div>{" "}
           </div>
           {/* HEADER RIGHT ICONS */}
@@ -108,10 +108,7 @@ const Dashboard = () => {
             </button>
 
             {/* scan icon */}
-            <button
-              aria-label="scan"
-              onClick={() => alert("Open scanner (stub)")}
-            >
+            <button aria-label="scan" onClick={() => setShowQRScanner(true)}>
               <svg
                 width="26"
                 height="26"
@@ -305,6 +302,15 @@ const Dashboard = () => {
               <img src={Book} alt="" className="w-[80%] " />
             </div>
           </button>
+
+          {showQRScanner && (
+            <QRScannerModal
+              onClose={() => setShowQRScanner(false)}
+              onResult={(data) => {
+                console.log("QR Result:", data);
+              }}
+            />
+          )}
 
           <button className="w-full rounded-xl p-4  text-left bg-linear-to-br from-[#00e5bf] to-[#00e5bf]/85 grid grid-cols-[70%_28%] gap-[2%] text-white font-bold shadow">
             <div>
