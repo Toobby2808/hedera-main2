@@ -7,7 +7,10 @@ import usericon from "./images-and-icons/fi-sr-following.png"
 import emailicon from "./images-and-icons/fi-sr-envelope.png"
 import passwordicon from "./images-and-icons/fi-sr-eye-crossed.png"
 import sucessfullicon from "./images-and-icons/Group 23.png"
-
+import art from "./book-market/mdi_art.svg"
+import businessicon from "./book-market/Vector (2).svg"
+import upload from "./book-market/fi-sr-cursor.svg"
+import bookImg from "./book-market/download 9.png"
 
 export {
     hederalogo,
@@ -18,5 +21,9 @@ export {
     usericon,
     emailicon,
     passwordicon,
-    sucessfullicon
+    sucessfullicon,
+    businessicon,
+    art,
+    bookImg,
+    upload
 }

@@ -88,15 +88,24 @@ export default function Screen6() {
       const data = await response.json();
       console.log("Login successful:", data);
 
-      // ✅ Extract token safely
-      const token =
-        data.access ||
-        data.token ||
-        data.access_token ||
-        data.authToken ||
-        (data.user && data.user.token);
+      // // ✅ Extract token safely
+      // const token =
+      //   data.access ||
+      //   data.token ||
+      //   data.access_token ||
+      //   data.authToken ||
+      //   (data.user && data.user.token);
 
-      if (!token) throw new Error("No token returned from backend.");
+      // if (!token) throw new Error("No token returned from backend.");
+
+      // ✅ Extract token correctly from backend
+      const token = data.access;
+
+      if (!token) throw new Error("Token not returned from server");
+
+      localStorage.setItem("authToken", token);
+      setToken(token);
+
 
       // ✅ Save token to localStorage + context
       localStorage.setItem("authToken", token);
@@ -115,6 +124,7 @@ export default function Screen6() {
       }
 
       const profileData = await profileResponse.json();
+
       console.log("Fetched profile data:", profileData);
 
       // ✅ Save latest user info in context and localStorage
