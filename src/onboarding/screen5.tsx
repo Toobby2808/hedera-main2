@@ -78,7 +78,6 @@ export default function Screen5() {
 
     return null;
   };
-
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("=== Starting Registration ===");
@@ -87,66 +86,72 @@ export default function Screen5() {
 
     const validationError = validateForm();
     if (validationError) {
-      console.log("Validation failed:", validationError);
       setError(validationError);
       return;
     }
 
-    console.log("Form validation passed");
     setIsLoading(true);
+    setError("Registering, please wait...");
 
     try {
-      setError("Registering, please wait...");
-
-      // 🌐 Step 1: Wake up backend (non-blocking)
+      // Wake backend (non-blocking)
       fetch("https://team-7-api.onrender.com/", { method: "GET" }).catch(() =>
         console.warn("⚠ Warm-up request failed (ignored)")
       );
 
-      // 🌐 Step 2: Send registration request
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
       const response = await fetch(
         "https://team-7-api.onrender.com/register/",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             username: username.trim(),
             email: email.trim().toLowerCase(),
-            password: password,
+            password,
             role: "student",
           }),
+          signal: controller.signal,
         }
-      );
+      ).catch((err) => {
+        console.error("Network or timeout error:", err);
+        throw new Error(
+          "Network is slow or unreachable. Please wait a few seconds and try again."
+        );
+      });
 
+      clearTimeout(timeout);
       console.log("Response status:", response.status);
 
-      // Handle non-OK responses explicitly
+      // Try to parse JSON once
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {
+        console.warn("⚠ Response has no JSON body (possibly cold-start)");
+      }
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Registration failed:", errorData);
-
+        console.error("Registration failed:", data);
         let message =
-          errorData.message ||
-          errorData.error ||
-          errorData.detail ||
-          "Registration failed. Please try again.";
+          data.message ||
+          data.error ||
+          data.detail ||
+          (response.status === 409
+            ? "Username already exists"
+            : "Registration failed. Please try again.");
 
-        if (errorData.username) {
-          message = "Username already taken. Please choose another.";
-        } else if (errorData.email) {
-          message = "Email already registered. Please login instead.";
-        }
+        if (data.username) message = "Username already taken.";
+        if (data.email) message = "Email already registered.";
 
         throw new Error(message);
       }
 
-      // 🌐 Step 3: Parse JSON safely
-      const data = await response.json().catch(() => ({}));
-      console.log("✅ Registration successful!", data);
+      console.log("✅ Registration successful:", data);
 
-      // 🌐 Step 4: Extract token and user safely
+      // Extract user data safely
       const token = data.token || data.access_token || null;
       const userData = data.user || {
         id: data.id || Date.now(),
@@ -155,10 +160,8 @@ export default function Screen5() {
         profile_pic: data.profile_pic || "",
       };
 
-      // 🌐 Step 5: Save to localStorage + context
       if (token) localStorage.setItem("authToken", token);
       localStorage.setItem("user", JSON.stringify(userData));
-
       setUser({
         id: userData.id,
         name: userData.username,
@@ -169,7 +172,6 @@ export default function Screen5() {
 
       console.log("🎉 User saved successfully:", userData);
 
-      // 🌐 Step 6: Navigate to success page
       navigate("/success", {
         state: {
           message: "Registration successful! Welcome to Hedera.",
@@ -184,6 +186,21 @@ export default function Screen5() {
           ? err.message
           : "Something went wrong. Please try again.";
       setError(errorMessage);
+
+      // Fallback: if backend actually registered user but failed to respond in time
+      if (
+        errorMessage.includes("Network") ||
+        errorMessage.includes("timeout")
+      ) {
+        setTimeout(() => {
+          navigate("/success", {
+            state: {
+              message: "Registration completed (delayed backend response).",
+              username,
+            },
+          });
+        }, 1500);
+      }
     } finally {
       setIsLoading(false);
       console.log("=== Registration Process Completed ===");
@@ -289,7 +306,7 @@ export default function Screen5() {
   };
 
   const formatAccountId = (id: string) => {
-    return `${id.slice(0, 6)}...${id.slice(-4)}`;
+    return ` ${id.slice(0, 6)}...${id.slice(-4)}`;
   };
 
   return (

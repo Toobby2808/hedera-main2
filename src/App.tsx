@@ -1,5 +1,6 @@
 import { Provider } from "react-redux";
 import { store } from "./store";
+import { useEffect } from "react";
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
@@ -31,6 +32,17 @@ import RewardsPage from "./pages/RewardsPage";
 import Dashboard from "./pages/Dashboard";
 
 function App() {
+  useEffect(() => {
+    const warmUp = async () => {
+      try {
+        await fetch("https://team-7-api.onrender.com", { cache: "no-store" });
+        console.log("✅ Backend warmed up and ready");
+      } catch (error) {
+        console.log("⚠ Warm-up failed — backend may still be waking up");
+      }
+    };
+    warmUp();
+  }, []);
   return (
     // <Provider store={store}>
     //   <BrowserRouter>
