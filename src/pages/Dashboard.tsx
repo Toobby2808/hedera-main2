@@ -104,10 +104,10 @@ const Dashboard: React.FC = () => {
         typeof data.balance === "number"
           ? data.balance
           : typeof data.amount === "number"
-          ? data.amount
-          : typeof data.walletBalance === "number"
-          ? data.walletBalance
-          : null;
+            ? data.amount
+            : typeof data.walletBalance === "number"
+              ? data.walletBalance
+              : null;
 
       if (latest === null) {
         setRewardBalance(null);
@@ -161,8 +161,8 @@ const Dashboard: React.FC = () => {
     rewardBalance !== null
       ? rewardBalance
       : typeof user?.walletBalance === "number"
-      ? user!.walletBalance
-      : Number((0).toFixed(2));
+        ? user!.walletBalance
+        : Number((0).toFixed(2));
 
   const displayBalance = balanceVisible
     ? `${displayNumber.toFixed(2)}`
@@ -330,9 +330,8 @@ const Dashboard: React.FC = () => {
 
               <span>
                 {percentChange !== null && dollarChange !== null
-                  ? `${percentChange.toFixed(2)}% (${
-                      dollarChange >= 0 ? "+" : ""
-                    }${dollarChange.toFixed(2)})`
+                  ? `${percentChange.toFixed(2)}% (${dollarChange >= 0 ? "+" : ""
+                  }${dollarChange.toFixed(2)})`
                   : "0.00% (+0.00)"}
               </span>
             </div>
@@ -419,7 +418,9 @@ const Dashboard: React.FC = () => {
             </div>
           </button>
 
-          <button className="w-full rounded-xl p-4 text-left bg-linear-to-br from-[#001ac3] via-[#001ac3]/85 to-[#001ac3]/70 grid grid-cols-[79%_20%] gap-[1%] text-white font-bold shadow">
+          <button
+            onClick={() => navigate("/book-market")}
+            className="w-full rounded-xl p-4 text-left bg-linear-to-br from-[#001ac3] via-[#001ac3]/85 to-[#001ac3]/70 grid grid-cols-[79%_20%] gap-[1%] text-white font-bold shadow">
             <div>
               Book Marketplace
               <div className="text-sm font-normal opacity-85 mt-1">

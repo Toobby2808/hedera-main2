@@ -28,7 +28,9 @@ import SupportPage from "./pages/SupportPage";
 import EditProfilePage from "./components/profile/EditProfilePage";
 import RewardsPage from "./pages/RewardsPage";
 import Dashboard from "./pages/Dashboard";
-
+import BookMarketplacePage from "./components/bookmarket/bookmarketplace";
+import BookDetailPage from "./components/bookmarket/bookDetailPage";
+import ReaderPage from "./components/bookmarket/components/readpage";
 function App() {
   useEffect(() => {
     const warmUp = async () => {
@@ -42,6 +44,23 @@ function App() {
     warmUp();
   }, []);
   return (
+    // <Provider store={store}>
+    //   <BrowserRouter>
+    //     <Routes>
+    //       {/* Onboarding flow */}
+    //       <Route path="/" element={<Screen1 />} />
+    //       <Route path="/welcome" element={<Screen2 />} />
+    //       {/* <Route path="/auth" element={<AuthScreen />} /> */}
+    //       {/* <Route path="/verify-code" element={<Screen4 />} /> */}
+    //       <Route path="/signup" element={<Screen5 />} />
+    //       <Route path="/login" element={<Screen6 />} />
+    //       <Route path="/success" element={<Screen7 />} />
+
+
+    //       <Route path="*" element={<Navigate to="/" replace />} />
+    //     </Routes>
+    //   </BrowserRouter>
+
     // </Provider>
     <Provider store={store}>
       <BrowserRouter>
@@ -62,6 +81,11 @@ function App() {
           <Route path="/ride-payment-success" element={<PaymentSuccess />} />
           <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/edit-profile" element={<EditProfilePage />} />
+          <Route path="/book-market" element={<BookMarketplacePage />} />
+          <Route path="/reader/:id" element={<ReaderPage />} />
+
+
+          <Route path="/book/:id" element={<BookDetailPage />} />
 
           {/* APP ROUTES */}
           <Route element={<AppLayout />}>
