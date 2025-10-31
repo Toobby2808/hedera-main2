@@ -1,5 +1,4 @@
-/* import { div } from "framer-motion/client"; */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { RiEyeFill, RiEyeOffFill } from "react-icons/ri";
 import Deposit from "../assets/home-icons/deposit.svg?react";
@@ -11,23 +10,24 @@ import Refer2 from "../assets/home-icons/refer2.svg";
 import Ride from "../assets/home-icons/a.svg";
 import Book from "../assets/home-icons/book.svg";
 import Task from "../assets/home-icons/task.svg";
-import { transactions } from "../transactions";
 import { useAuthContext } from "../context/AuthContext";
 import QRScannerModal from "../components/QRScannerModal";
-
 import TransactionsPreview from "../components/transactions/TransactionsPreview";
 
-const Dashboard = () => {
-  const { user } = useAuthContext();
+const API_BASE = "https://team-7-api.onrender.com";
+
+const Dashboard: React.FC = () => {
+  const { user, token } = useAuthContext();
   const navigate = useNavigate();
 
-  if (!user) {
-    return navigate("/login");
-  }
+  // Redirect to login if no user
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
 
-  const balance = `${user.walletBalance || "0.00"}`;
-
-  // UI STATES
+  // UI STATES (kept your design & naming)
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [currency, setCurrency] = useState("USD");
   const [walletAddr] = useState("ASefjcxkndfJ2J...ELKdckj2");
@@ -35,6 +35,15 @@ const Dashboard = () => {
   const [showFilter, setShowFilter] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
+
+  // reward balance state loaded from reward API
+  const [rewardBalance, setRewardBalance] = useState<number | null>(null);
+  const [loadingBalance, setLoadingBalance] = useState(false);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
+
+  // computed change values
+  const [percentChange, setPercentChange] = useState<number | null>(null);
+  const [dollarChange, setDollarChange] = useState<number | null>(null);
 
   const toggleBalance = () => setBalanceVisible((s) => !s);
   const toggleCurrencyMenu = () => setShowCurrencyMenu((s) => !s);
@@ -49,21 +58,124 @@ const Dashboard = () => {
     }
   };
 
-  const onDeposit = () => {
-    alert("Deposit clicked — wire up modal / route.");
+  // Navigation handlers
+  const onDeposit = () => navigate("/deposit");
+  const onWithdraw = () => navigate("/withdraw");
+
+  // Helper: prefer token from context, fallback to localStorage
+  const authToken =
+    token || localStorage.getItem("authToken") || localStorage.getItem("token");
+
+  // Fetch the reward balance from the same endpoint as RewardsPage
+  const fetchRewardBalance = async () => {
+    if (!authToken) {
+      setBalanceError("Not authenticated");
+      setRewardBalance(null);
+      setPercentChange(null);
+      setDollarChange(null);
+      return;
+    }
+
+    setLoadingBalance(true);
+    setBalanceError(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/reward/balance/, {
+        headers: {
+          Authorization: Bearer ${authToken},
+        },
+      }`);
+
+      // attempt to parse JSON safely
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        console.warn("reward balance fetch failed", res.status, data);
+        setBalanceError("");
+        setRewardBalance(null);
+        setPercentChange(null);
+        setDollarChange(null);
+        setLoadingBalance(false);
+        return;
+      }
+
+      // common response shapes: { balance: number } or { amount: number } etc.
+      const latest =
+        typeof data.balance === "number"
+          ? data.balance
+          : typeof data.amount === "number"
+          ? data.amount
+          : typeof data.walletBalance === "number"
+          ? data.walletBalance
+          : null;
+
+      if (latest === null) {
+        setRewardBalance(null);
+        setPercentChange(null);
+        setDollarChange(null);
+        setLoadingBalance(false);
+        return;
+      }
+
+      // Compute percent/dollar change using the user's stored data as "previous"
+      // If user.walletBalance isn't a number, fallback to no change (0)
+      const prevRaw = user?.walletBalance;
+      const prev = typeof prevRaw === "number" ? prevRaw : null;
+
+      if (prev !== null && !Number.isNaN(prev)) {
+        // if prev is zero, define percent change as 0 to avoid divide-by-zero
+        if (prev === 0) {
+          setPercentChange(0);
+        } else {
+          const pct = ((latest - prev) / Math.abs(prev)) * 100;
+          setPercentChange(Number(pct.toFixed(2)));
+        }
+        setDollarChange(Number((latest - (prev ?? 0)).toFixed(2)));
+      } else {
+        // no previous stored (or not numeric) — show 0 changes
+        setPercentChange(0);
+        setDollarChange(0);
+      }
+
+      setRewardBalance(latest);
+    } catch (err) {
+      console.error("Error fetching reward balance:", err);
+      setBalanceError("Network or server error");
+      setRewardBalance(null);
+      setPercentChange(null);
+      setDollarChange(null);
+    } finally {
+      setLoadingBalance(false);
+    }
   };
-  const onWithdraw = () => {
-    alert("Withdraw clicked — wire up modal / route.");
-  };
+
+  // Load balance on mount and when authToken changes
+  useEffect(() => {
+    if (authToken) fetchRewardBalance();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authToken]);
+
+  //
+  // If rewardBalance available, use that; otherwise fallback to user.walletBalance or "0.00"
+  const displayNumber =
+    rewardBalance !== null
+      ? rewardBalance
+      : typeof user?.walletBalance === "number"
+      ? user!.walletBalance
+      : Number((0).toFixed(2));
+
+  const displayBalance = balanceVisible
+    ? `${displayNumber.toFixed(2)}`
+    : "•••••";
+
+  // Keep original balance string variable used throughout your markup
+  const balance = `${displayBalance}`;
 
   return (
     <div className="min-h-screen bg-linear-to-b from-green-50 to-white px-4 sm:p-6 lg:p-10 font-sans text-grey">
-      {" "}
       <div className=" max-w-md mx-auto">
-        {" "}
-        {/* Header */}{" "}
+        {/* Header */}
         <div className=" h-20 flex py-4 items-center justify-between">
-          {" "}
           <div className="flex items-center gap-3">
             {/* Avatar Section */}
             {user?.profile_image ? (
@@ -80,13 +192,13 @@ const Dashboard = () => {
               </div>
             )}
             <div>
-              {" "}
               <div className="font-bold text-black ">
-                {user?.first_name || user.last_name || user.username}
-              </div>{" "}
-              <div className="text-xs text-gray-500">@{user.username}</div>{" "}
-            </div>{" "}
+                {user?.first_name || user?.last_name || user?.username}
+              </div>
+              <div className="text-xs text-gray-500">@{user?.username}</div>
+            </div>
           </div>
+
           {/* HEADER RIGHT ICONS */}
           <div className="flex items-center gap-6">
             {/* bell with red dot */}
@@ -124,6 +236,7 @@ const Dashboard = () => {
             </button>
           </div>
         </div>
+
         {/* Balance Card */}
         <div className="rounded-2xl overflow-hidden bg-linear-to-br from-pri/64 to-pri p-5 shadow-lg mb-4">
           <div className="flex items-center gap-4 justify-center">
@@ -135,7 +248,6 @@ const Dashboard = () => {
               aria-label="toggle-balance"
               className="text-white/90"
             >
-              {/* eye icon toggles */}
               {balanceVisible ? (
                 <RiEyeOffFill size={20} className="text-white" />
               ) : (
@@ -145,7 +257,7 @@ const Dashboard = () => {
           </div>
 
           <div className="mt-2 flex items-center justify-center gap-3">
-            <div className="bg-white/84 w-20  px-3 py-0.5 rounded-full flex items-center gap-2">
+            <div className="bg-white/84 w-20 px-3 py-0.5 rounded-full flex items-center gap-2">
               <div className="w-4 h-4 bg-pri rounded-full flex items-center justify-center text-white text-xs font-bold">
                 $
               </div>
@@ -198,6 +310,7 @@ const Dashboard = () => {
             <div className="text-5xl font-bold text-white">
               {balanceVisible ? `${balance}` : "•••••"}
             </div>
+
             <div className="text-sm flex items-center gap-2 justify-center font-bold text-white/90 mt-1">
               <span>
                 <svg
@@ -214,7 +327,14 @@ const Dashboard = () => {
                   />
                 </svg>
               </span>
-              <span>0.02% (+$24.78)</span>
+
+              <span>
+                {percentChange !== null && dollarChange !== null
+                  ? `${percentChange.toFixed(2)}% (${
+                      dollarChange >= 0 ? "+" : ""
+                    }${dollarChange.toFixed(2)})`
+                  : "0.00% (+0.00)"}
+              </span>
             </div>
 
             <div className="flex w-[90%] mx-auto gap-3 mt-4">
@@ -251,13 +371,21 @@ const Dashboard = () => {
                 <Copy className="w-2.5 h-2.5" />
               </button>
             </div>
+
             {copied && (
               <div className="mt-2 text-sm font-semibold text-white/90 text-center">
                 Copied to Clipboard!
               </div>
             )}
+
+            {balanceError && (
+              <div className="mt-2 text-xs font-medium text-yellow-200 text-center">
+                {balanceError}
+              </div>
+            )}
           </div>
         </div>
+
         {/* Cards: Refer & Earn, Book A Ride, Book Marketplace, Tasks and Rewards */}
         <div className="space-y-3 mb-4">
           <div className="rounded-xl border border-pri/20 relative overflow-hidden px-3 py-3 bg-linear-to-br from-[#08240C]/20 to-[#08240C]/10 flex items-start gap-3">
@@ -299,7 +427,7 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="flex justify-end">
-              <img src={Book} alt="" className="w-[80%] " />
+              <img src={Book} alt="" className="w-[80%]" />
             </div>
           </button>
 
@@ -312,7 +440,7 @@ const Dashboard = () => {
             />
           )}
 
-          <button className="w-full rounded-xl p-4  text-left bg-linear-to-br from-[#00e5bf] to-[#00e5bf]/85 grid grid-cols-[70%_28%] gap-[2%] text-white font-bold shadow">
+          <button className="w-full rounded-xl p-4 text-left bg-linear-to-br from-[#00e5bf] to-[#00e5bf]/85 grid grid-cols-[70%_28%] gap-[2%] text-white font-bold shadow">
             <div>
               Tasks and Rewards
               <div className="text-sm font-normal opacity-85 mt-1">
@@ -320,12 +448,14 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="flex justify-end">
-              <img src={Task} alt="" className="w-[50%] " />
+              <img src={Task} alt="" className="w-[50%]" />
             </div>
           </button>
         </div>
+
         {/* Transactions Header */}
-        <TransactionsPreview transactions={transactions} />
+        <TransactionsPreview />
+
         {showFilter && (
           <div className="mb-3 p-3 bg-white rounded shadow">
             <div className="flex items-center justify-between">

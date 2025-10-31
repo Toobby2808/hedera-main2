@@ -1,21 +1,18 @@
-import { hederalogo } from "../assets/images";
+import Image1 from "../assets/images-and-icons/logo1.png";
 import Onboarding from "./shared/hero";
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 export default function screen1() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    const handleGetStarted = () => {
-        console.log("Button clicked, attempting to navigate");
-        navigate('/welcome');
-    };
+  const handleGetStarted = () => {
+    console.log("Button clicked, attempting to navigate");
+    navigate("/welcome");
+  };
 
-
-    return (
-        <div>
-            <Onboarding
-                image={hederalogo}
-                onButtonClick={handleGetStarted} />
-        </div>
-    );
+  return (
+    <div>
+      <Onboarding image={Image1} onButtonClick={handleGetStarted} />
+    </div>
+  );
 }

@@ -136,15 +136,13 @@ const LibraryContent = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto">
+    <div className="max-w-md bg-white rounded-md mx-auto">
       {/* CURRENT READS Header */}
-      <div className="flex items-center gap-3 mt-6">
+      <div className="flex  rounded p-2 items-center gap-3 mt-6">
         <div className="">
           <BookIcon className="w-8 h-8" />
         </div>
-        <h2 className="text-2xl text-black dark:text-white font-bold">
-          Current Reads
-        </h2>
+        <h2 className="text-2xl text-black font-bold">Current Reads</h2>
       </div>
 
       {/* Current Reads list */}
@@ -193,7 +191,7 @@ const LibraryContent = () => {
 
       {/* COMPLETED READS */}
       <div className="mt-10">
-        <div className="flex items-center gap-3">
+        <div className="flex bg-white/70 rounded-sm p-2 items-center gap-3">
           <div className="">
             <RiFlagFill className="w-7 h-7 text-pri" />
           </div>

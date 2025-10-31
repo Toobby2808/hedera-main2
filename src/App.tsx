@@ -15,7 +15,6 @@ import Screen6 from "./onboarding/screen6";
 import Screen7 from "./onboarding/screen7";
 
 import AppLayout from "./layouts/AppLayout";
-import Dashboard from "./pages/Dashboard";
 
 import TestAPI from "./pages/TestApi";
 
@@ -28,6 +27,8 @@ import PaymentSuccess from "./pages/app/bookride/PaymentSuccess";
 import ProfilePage from "./pages/ProfilePage";
 import SupportPage from "./pages/SupportPage";
 import EditProfilePage from "./components/profile/EditProfilePage";
+import RewardsPage from "./pages/RewardsPage";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
@@ -73,6 +74,7 @@ function App() {
           {/* APP ROUTES */}
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/rewards" element={<RewardsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/support" element={<SupportPage />} />
           </Route>
