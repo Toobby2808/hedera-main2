@@ -87,59 +87,54 @@ export default function Screen6() {
       }
 
       const data = await response.json();
-      console.log("Login successful:", data);
+      console.log("✅ Login successful:", data);
 
-      // // ✅ Extract token safely
-      // const token =
-      //   data.access ||
-      //   data.token ||
-      //   data.access_token ||
-      //   data.authToken ||
-      //   (data.user && data.user.token);
-
-      // if (!token) throw new Error("No token returned from backend.");
-
-      // ✅ Extract token correctly from backend
-      const token = data.access;
+      // ✅ Safely extract token (backend must return this key)
+      const token =
+        data.access ||
+        data.token ||
+        data.access_token ||
+        data.authToken ||
+        (data.user && data.user.token);
 
       if (!token) throw new Error("Token not returned from server");
 
-      localStorage.setItem("authToken", token);
+      // ✅ Save token immediately (Context + LocalStorage)
       setToken(token);
-
-
-      // ✅ Save token to localStorage + context
       localStorage.setItem("authToken", token);
-      setToken(token);
 
-      // ✅ Fetch latest backend profile immediately
-      const profileResponse = await fetch(
-        "https://team-7-api.onrender.com/profile",
-        {
-          headers: { Authorization: `Bearer ${token}` },
+      // ✅ If backend returned user data directly, use it
+      if (data.user) {
+        setUser(data.user);
+        localStorage.setItem("user", JSON.stringify(data.user));
+      } else {
+        // 🔄 Otherwise, fetch fresh profile
+        const profileResponse = await fetch(
+          "https://team-7-api.onrender.com/profile/",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (!profileResponse.ok) {
+          throw new Error("Failed to fetch user profile after login.");
         }
-      );
 
-      if (!profileResponse.ok) {
-        throw new Error("Failed to fetch user profile after login.");
+        const profileData = await profileResponse.json();
+        console.log("✅ Fetched profile data:", profileData);
+
+        setUser(profileData);
+        localStorage.setItem("user", JSON.stringify(profileData));
       }
-
-      const profileData = await profileResponse.json();
-
-      console.log("Fetched profile data:", profileData);
-
-      // ✅ Save latest user info in context and localStorage
-      setUser(profileData);
-      localStorage.setItem("user", JSON.stringify(profileData));
 
       setSuccess("Login successful! Redirecting...");
 
-      // ✅ Redirect after delay
+      // ✅ Redirect cleanly after short delay
       setTimeout(() => {
         navigate("/dashboard");
         setEmail("");
         setPassword("");
-      }, 1000);
+      }, 800);
     } catch (err) {
       console.error("Login error:", err);
       setError(err instanceof Error ? err.message : "Something went wrong.");

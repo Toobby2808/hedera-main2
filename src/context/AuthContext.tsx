@@ -74,23 +74,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // ✅ Load saved user & token on startup
   useEffect(() => {
-    const storedUser = localStorage.getItem(USER_KEY);
-    const storedToken = localStorage.getItem(TOKEN_KEY);
+    const initAuth = async () => {
+      const storedUser = localStorage.getItem(USER_KEY);
+      const storedToken = localStorage.getItem(TOKEN_KEY);
 
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
-        console.error("Error parsing user:", err);
-        localStorage.removeItem(USER_KEY);
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (err) {
+          console.error("Error parsing user:", err);
+          localStorage.removeItem(USER_KEY);
+        }
       }
-    }
 
-    if (storedToken) {
-      setToken(storedToken);
-      // 🔄 Fetch updated user info from backend when app boots
-      fetchProfile(storedToken);
-    }
+      if (storedToken) {
+        setToken(storedToken);
+
+        try {
+          // ✅ Quick check to confirm token is still valid
+          const res = await fetch("https://team-7-api.onrender.com/profile/", {
+            headers: { Authorization: `Bearer ${storedToken} ` },
+          });
+
+          if (res.ok) {
+            const profileData = await res.json();
+            setUser(profileData);
+            localStorage.setItem(USER_KEY, JSON.stringify(profileData));
+            console.log("✅ Session restored successfully");
+          } else {
+            console.warn("⚠ Token expired or invalid, clearing session");
+            logout();
+          }
+        } catch (err) {
+          console.error("❌ Error validating session:", err);
+        }
+      }
+    };
+
+    initAuth();
   }, []);
 
   // ✅ Sync user and token with localStorage
