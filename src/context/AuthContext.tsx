@@ -43,11 +43,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
-  // ✅ Always use same key name for localStorage
   const TOKEN_KEY = "authToken";
   const USER_KEY = "user";
 
-  // ✅ Fetch latest user profile from backend
+  // ✅ Fetch profile from backend using token
   const fetchProfile = async (authToken?: string) => {
     const effectiveToken = authToken || token;
     if (!effectiveToken) return;
@@ -59,12 +58,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!response.ok) {
         console.warn("⚠ Failed to fetch profile:", response.status);
+        if (response.status === 401) logout();
         return;
       }
 
       const profileData = await response.json();
       console.log("✅ Profile fetched:", profileData);
 
+      // Replace current user with fresh server data
       setUser(profileData);
       localStorage.setItem(USER_KEY, JSON.stringify(profileData));
     } catch (error) {
@@ -72,75 +73,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ✅ Load saved user & token on startup
+  // ✅ Restore session from localStorage and re-fetch latest profile
   useEffect(() => {
     const initAuth = async () => {
-      const storedUser = localStorage.getItem(USER_KEY);
       const storedToken = localStorage.getItem(TOKEN_KEY);
+      const storedUser = localStorage.getItem(USER_KEY);
 
       if (storedUser) {
         try {
           setUser(JSON.parse(storedUser));
-        } catch (err) {
-          console.error("Error parsing user:", err);
+        } catch {
           localStorage.removeItem(USER_KEY);
         }
       }
 
       if (storedToken) {
         setToken(storedToken);
-
-        try {
-          // ✅ Quick check to confirm token is still valid
-          const res = await fetch("https://team-7-api.onrender.com/profile/", {
-            headers: { Authorization: `Bearer ${storedToken} ` },
-          });
-
-          if (res.ok) {
-            const profileData = await res.json();
-            setUser(profileData);
-            localStorage.setItem(USER_KEY, JSON.stringify(profileData));
-            console.log("✅ Session restored successfully");
-          } else {
-            console.warn("⚠ Token expired or invalid, clearing session");
-            logout();
-          }
-        } catch (err) {
-          console.error("❌ Error validating session:", err);
-        }
+        await fetchProfile(storedToken); // always refetch latest profile
       }
     };
 
     initAuth();
   }, []);
 
-  // ✅ Sync user and token with localStorage
+  // ✅ Sync user to localStorage
   useEffect(() => {
     if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
     else localStorage.removeItem(USER_KEY);
   }, [user]);
 
+  // ✅ Sync token to localStorage
   useEffect(() => {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
   }, [token]);
 
-  // ✅ Auto-apply dark mode preference
+  // ✅ Auto-toggle dark mode
   useEffect(() => {
     const darkMode = user?.preferences?.darkMode;
     document.documentElement.classList.toggle("dark", !!darkMode);
   }, [user?.preferences?.darkMode]);
 
-  // ✅ Update user info globally
+  // ✅ Update user locally & sync with backend after edits
   const updateUser = (newUserData: Partial<User>) => {
     setUser((prev) => {
       const updated = { ...prev, ...newUserData };
       localStorage.setItem(USER_KEY, JSON.stringify(updated));
       return updated;
     });
+
+    // Re-fetch from backend to ensure persistence
+    if (token) fetchProfile(token);
   };
 
-  // ✅ Update preferences only
+  // ✅ Update preferences
   const updateUserPreferences = (updatedPrefs: Partial<UserPreferences>) => {
     setUser((prev) => {
       if (!prev) return prev;
@@ -156,7 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  // ✅ Logout clears everything cleanly
+  // ✅ Logout clears everything
   const logout = () => {
     setUser(null);
     setToken(null);
