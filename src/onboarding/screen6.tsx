@@ -103,29 +103,35 @@ export default function Screen6() {
       setToken(token);
       localStorage.setItem("authToken", token);
 
-      // ✅ If backend returned user data directly, use it
-      if (data.user) {
-        setUser(data.user);
-        localStorage.setItem("user", JSON.stringify(data.user));
-      } else {
-        // 🔄 Otherwise, fetch fresh profile
-        const profileResponse = await fetch(
-          "https://team-7-api.onrender.com/profile/",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        if (!profileResponse.ok) {
-          throw new Error("Failed to fetch user profile after login.");
+      // ✅ Always fetch the latest user profile after login
+      const profileResponse = await fetch(
+        "https://team-7-api.onrender.com/profile/",
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
+      );
 
-        const profileData = await profileResponse.json();
-        console.log("✅ Fetched profile data:", profileData);
-
-        setUser(profileData);
-        localStorage.setItem("user", JSON.stringify(profileData));
+      if (!profileResponse.ok) {
+        throw new Error("Failed to fetch user profile after login.");
       }
+
+      const profileData = await profileResponse.json();
+      console.log("✅ Fresh profile fetched:", profileData);
+
+      // ✅ Normalize data before saving (to match your dashboard UI)
+      const normalizedUser = {
+        username: profileData.username || profileData.user?.username || "",
+        email: profileData.email || profileData.user?.email || "",
+        first_name:
+          profileData.first_name || profileData.user?.first_name || "",
+        last_name: profileData.last_name || profileData.user?.last_name || "",
+        wallet_id: profileData.wallet_id || "",
+        ...profileData,
+      };
+
+      // ✅ Save properly
+      setUser(normalizedUser);
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
 
       setSuccess("Login successful! Redirecting...");
 
