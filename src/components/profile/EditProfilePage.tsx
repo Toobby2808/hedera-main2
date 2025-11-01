@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Camera } from "lucide-react";
 import { useAuthContext } from "../../context/AuthContext";
 
@@ -23,6 +23,20 @@ const EditProfilePage = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Modal state
+  const [modal, setModal] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  // Automatically close modal after 3 seconds
+  useEffect(() => {
+    if (modal) {
+      const timer = setTimeout(() => setModal(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [modal]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -44,7 +58,10 @@ const EditProfilePage = () => {
     e.preventDefault();
 
     if (!token) {
-      alert("Session expired. Please log in again.");
+      setModal({
+        type: "error",
+        message: "Session expired. Please log in again.",
+      });
       logout();
       navigate("/login");
       return;
@@ -53,7 +70,6 @@ const EditProfilePage = () => {
     try {
       setLoading(true);
 
-      // Using FormData for both text + file fields
       const data = new FormData();
       Object.entries(formData).forEach(([key, value]) =>
         data.append(key, value)
@@ -62,16 +78,17 @@ const EditProfilePage = () => {
 
       const response = await fetch("https://team-7-api.onrender.com/profile/", {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: data,
       });
 
       const resData = await response.json();
 
       if (response.status === 401) {
-        alert("Session expired. Please log in again.");
+        setModal({
+          type: "error",
+          message: "Session expired. Please log in again.",
+        });
         logout();
         navigate("/login");
         return;
@@ -79,18 +96,29 @@ const EditProfilePage = () => {
 
       if (!response.ok) {
         console.error("Profile update failed:", resData);
-        alert(resData.detail || "Failed to update profile. Please try again.");
+        setModal({
+          type: "error",
+          message: resData.detail || "Failed to update profile.",
+        });
         return;
       }
 
       console.log("✅ Profile updated successfully:", resData);
       updateUser(resData);
-      alert("Profile updated successfully!");
-      await fetchProfile(token); // Refresh profile data
-      navigate(-1);
+      await fetchProfile(token);
+
+      setModal({ type: "success", message: "Profile updated successfully!" });
+
+      // Redirect after short delay
+      setTimeout(() => {
+        navigate(-1);
+      }, 1200);
     } catch (err) {
       console.error("❌ Error updating profile:", err);
-      alert("An unexpected error occurred. Please try again.");
+      setModal({
+        type: "error",
+        message: "An unexpected error occurred. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -102,7 +130,7 @@ const EditProfilePage = () => {
       animate={{ x: 0 }}
       exit={{ x: "100%" }}
       transition={{ type: "spring", stiffness: 80, damping: 18 }}
-      className="min-h-screen bg-green-50 dark:bg-gray-900 p-5"
+      className="min-h-screen bg-green-50 dark:bg-gray-900 p-5 relative"
     >
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
@@ -189,6 +217,44 @@ const EditProfilePage = () => {
           {loading ? "Saving..." : "Save Changes"}
         </button>
       </form>
+
+      {/* ✅ Modal */}
+      <AnimatePresence>
+        {modal && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.8 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 max-w-sm w-full text-center"
+            >
+              <h3
+                className={`text-lg font-semibold mb-3 ${
+                  modal.type === "success" ? "text-green-600" : "text-red-500"
+                }`}
+              >
+                {modal.type === "success" ? "Success" : "Error"}
+              </h3>
+              <p className="text-gray-700 dark:text-gray-200 mb-6">
+                {modal.message}
+              </p>
+              <button
+                onClick={() => setModal(null)}
+                className="bg-pri text-white py-2 px-6 rounded-full font-medium hover:bg-green-600 transition"
+              >
+                OK
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
