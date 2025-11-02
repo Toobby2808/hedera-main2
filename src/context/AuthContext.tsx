@@ -89,7 +89,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (storedToken) {
         setToken(storedToken);
-        await fetchProfile(storedToken); // always refetch latest profile
+
+        // HERE IS THE NEW FIX:
+        try {
+          const res = await fetch("https://team-7-api.onrender.com/profile/", {
+            headers: { Authorization: `Bearer ${storedToken}` },
+          });
+
+          if (res.status === 401) {
+            console.log("Token expired, clearing session");
+            logout();
+            return;
+          }
+
+          const profileData = await res.json();
+          setUser(profileData);
+          localStorage.setItem(USER_KEY, JSON.stringify(profileData));
+        } catch (error) {
+          console.error("Profile fetch failed:", error);
+          logout();
+        }
       }
     };
 

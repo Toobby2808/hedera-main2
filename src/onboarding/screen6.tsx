@@ -54,6 +54,11 @@ export default function Screen6() {
     setError("");
     setSuccess("");
 
+    // clear any old tokens to avoid expired token conflict
+    setToken(null);
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("user");
+
     const validationError = validateForm();
     if (validationError) {
       console.log("Validation failed:", validationError);
@@ -103,7 +108,7 @@ export default function Screen6() {
       setToken(token);
       localStorage.setItem("authToken", token);
 
-      // ✅ Always fetch the latest user profile after login
+      // ✅ Fetch fresh profile data
       const profileResponse = await fetch(
         "https://team-7-api.onrender.com/profile/",
         {
