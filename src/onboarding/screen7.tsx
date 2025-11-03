@@ -1,6 +1,7 @@
 import { sucessfullicon } from "../assets/images";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
+import { useEffect } from "react";
 
 export default function screen7() {
   const navigate = useNavigate();
@@ -9,23 +10,20 @@ export default function screen7() {
 
   const user = location.state?.user;
 
-  const handleGoToLogin = () => {
+  // ✅ Save user data in both context and localStorage for persistence
+  useEffect(() => {
     if (user) {
-      // ✅ Immediately set user context so dashboard has it
-      setUser({
-        id: user.id,
-        name: user.username,
-        email: user.email,
-        profilePic: user.profile_pic || "",
-        preferences: {},
-      });
-
-      // ✅ Also store in localStorage for persistence
       localStorage.setItem("user", JSON.stringify(user));
+      setUser(user);
+      console.log("✅ User saved to localStorage and context:", user);
+    } else {
+      console.warn("⚠ No user data received in SuccessScreen");
     }
+  }, [user, setUser]);
 
+  const handleGoToDashboard = () => {
     // ✅ Navigate to actual dashboard, not login
-    navigate("/login");
+    navigate("/dashboard");
   };
 
   return (
@@ -42,10 +40,10 @@ export default function screen7() {
         </div>
         <div className="w-full pb-8">
           <button
-            onClick={handleGoToLogin}
+            onClick={handleGoToDashboard}
             className="bg-white text-[#00C317] text-xl w-full p-4 font-semibold  rounded-full"
           >
-            Continue to Login
+            Go to Dashboard
           </button>
         </div>
       </div>
