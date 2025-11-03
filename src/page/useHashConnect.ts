@@ -95,89 +95,109 @@
 
 // export default useHashConnect;
 
-
-import { useEffect, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import type { RootState } from '../store';
-import { setLoading, setConnected, setDisconnected } from '../store/hashconnectSlice';
-import { hc, getHashConnectInstance, getInitPromise, getConnectedAccountIds } from '../hashconnect';
+import { useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState } from "../store";
+import {
+  setLoading,
+  setConnected,
+  setDisconnected,
+} from "../store/hashconnectSlice";
+import {
+  hc,
+  getHashConnectInstance,
+  getInitPromise,
+  getConnectedAccountIds,
+} from "../hashconnect";
 
 const useHashConnect = () => {
-    const dispatch = useDispatch();
-    const hashconnectState = useSelector((state: RootState) => state.hashconnect);
-    const { isConnected, accountId, isLoading } = hashconnectState;
-    const setupAttempted = useRef(false);
+  const dispatch = useDispatch();
+  const hashconnectState = useSelector((state: RootState) => state.hashconnect);
+  const { isConnected, accountId, isLoading } = hashconnectState;
+  const setupAttempted = useRef(false);
 
-    useEffect(() => {
-        // Prevent multiple setup attempts
-        if (setupAttempted.current) return;
-        setupAttempted.current = true;
+  useEffect(() => {
+    // Prevent multiple setup attempts
+    if (setupAttempted.current) return;
+    setupAttempted.current = true;
 
-        const setupHashConnect = async () => {
-            try {
-                // only run on client side
-                if (typeof window === 'undefined') return;
+    const setupHashConnect = async () => {
+      try {
+        // only run on client side
+        if (typeof window === "undefined") return;
 
-                console.log('Initializing HashConnect...');
+        console.log("Initializing HashConnect...");
 
-                // Wait for HashConnect to initialize with timeout
-                const instance = getHashConnectInstance();
+        // Wait for HashConnect to initialize with timeout
+        const instance = getHashConnectInstance();
 
-                // Add timeout to prevent indefinite waiting
-                const initPromise = getInitPromise();
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('HashConnect initialization timeout')), 30000)
-                );
+        // Add timeout to prevent indefinite waiting
+        const initPromise = getInitPromise();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("HashConnect initialization timeout")),
+            30000
+          )
+        );
 
-                await Promise.race([initPromise, timeoutPromise]);
-                console.log('HashConnect initialized successfully');
+        await Promise.race([initPromise, timeoutPromise]);
+        console.log("HashConnect initialized successfully");
 
-                // Set up event listeners
-                instance.pairingEvent.on((pairingData: any) => {
-                    console.log("Pairing event:", pairingData);
-                    const accountIds = getConnectedAccountIds();
-                    if (accountIds && accountIds.length > 0) {
-                        dispatch(setConnected({
-                            accountId: accountIds[0].toString()
-                        }));
-                    }
-                });
+        // Set up event listeners
+        instance.pairingEvent.on((pairingData: any) => {
+          console.log("Pairing event:", pairingData);
+          const accountIds = getConnectedAccountIds();
+          if (accountIds && accountIds.length > 0) {
+            dispatch(
+              setConnected({
+                accountId: accountIds[0].toString(),
+              })
+            );
+          }
+        });
 
-                instance.disconnectionEvent.on(() => {
-                    console.log("Disconnection event");
-                    dispatch(setDisconnected());
-                });
+        instance.disconnectionEvent.on(() => {
+          console.log("Disconnection event");
+          dispatch(setDisconnected());
+        });
 
-                instance.connectionStatusChangeEvent.on((connectionStatus: any) => {
-                    console.log("Connection status change:", connectionStatus);
-                });
+        instance.connectionStatusChangeEvent.on((connectionStatus: any) => {
+          console.log("Connection status change:", connectionStatus);
+        });
 
-                // Check if already connected
-                const accountIds = getConnectedAccountIds();
-                if (accountIds && accountIds.length > 0) {
-                    dispatch(setConnected({
-                        accountId: accountIds[0].toString()
-                    }));
-                }
+        // Check if already connected
+        const accountIds = getConnectedAccountIds();
+        if (accountIds && accountIds.length > 0) {
+          dispatch(
+            setConnected({
+              accountId: accountIds[0].toString(),
+            })
+          );
+        }
 
-                console.log("HashConnect setup completed");
-                dispatch(setLoading(false));
-            } catch (error) {
-                console.error("HashConnect setup failed:", error);
-                // Don't block the app if HashConnect fails to initialize
-                dispatch(setLoading(false));
+        console.log("HashConnect setup completed");
+        dispatch(setLoading(false));
+      } catch (error) {
+        console.error("HashConnect setup failed:", error);
+        // Don't block the app if HashConnect fails to initialize
+        dispatch(setLoading(false));
 
-                // Optionally show a user-friendly message
-                if (error instanceof Error && error.message.includes('Socket stalled')) {
-                    console.warn('WalletConnect relay connection issue. You can still try to connect when clicking the button.');
-                }
-            }
-        };
+        // Optionally show a user-friendly message
+        if (
+          error instanceof Error &&
+          error.message.includes("Socket stalled")
+        ) {
+          console.warn(
+            "WalletConnect relay connection issue. You can still try to connect when clicking the button."
+          );
+        }
+      }
+    };
 
-        setupHashConnect();
-    }, [dispatch]);
+    setupHashConnect();
+  }, [dispatch]);
 
-    const connect = async () => {
+  /* const connect = async () => {
         dispatch(setLoading(true));
         try {
             // Only run on client side
@@ -209,29 +229,99 @@ const useHashConnect = () => {
                 }
             }
         }
-    };
+    }; */
 
-    const disconnect = () => {
-        try {
-            // Only run on client side
-            if (typeof window === 'undefined') return;
+  const connect = async () => {
+    dispatch(setLoading(true));
 
-            const instance = getHashConnectInstance();
-            instance.disconnect();
-            dispatch(setDisconnected());
-        } catch (error) {
-            console.error('Disconnect failed:', error);
-            dispatch(setDisconnected());
+    try {
+      if (typeof window === "undefined") return;
+
+      console.log("Attempting to connect to wallet...");
+      const instance = getHashConnectInstance();
+
+      // --- 🧭 Detect platform (mobile vs desktop)
+      const userAgent =
+        navigator.userAgent || navigator.vendor || (window as any).opera;
+      const isAndroid = /android/i.test(userAgent);
+      const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+      const isMobile = isAndroid || isIOS;
+
+      // --- 🧩 Check if wallet extension/app is installed
+      const hasWalletExtension =
+        typeof (window as any).hashconnect !== "undefined" ||
+        typeof (window as any).hederaWallet !== "undefined" ||
+        typeof (window as any).walletConnect !== "undefined";
+
+      if (!hasWalletExtension) {
+        console.log("No wallet detected on this device");
+
+        // --- 📱 If mobile, redirect to store
+        if (isMobile) {
+          const walletDownloadURL = isIOS
+            ? "https://apps.apple.com/app/hashpack-wallet/id1604843360" // Example for HashPack
+            : "https://play.google.com/store/apps/details?id=com.hashpack.wallet"; // Android
+
+          alert("No wallet app detected. Redirecting you to download it...");
+          window.open(walletDownloadURL, "_blank");
+          dispatch(setLoading(false));
+          return;
+        } else {
+          // --- 💻 Desktop user: open wallet download page
+          const walletExtensionURL = "https://www.hashpack.app/download";
+          alert(
+            "No Hedera wallet extension found. Redirecting to download page..."
+          );
+          window.open(walletExtensionURL, "_blank");
+          dispatch(setLoading(false));
+          return;
         }
-    };
+      }
 
-    return {
-        isConnected,
-        accountId,
-        isLoading,
-        connect,
-        disconnect
-    };
+      // --- ⚙ If wallet exists, continue connection
+      try {
+        await getInitPromise();
+      } catch {
+        console.log("Reinitializing HashConnect...");
+        await hc.init();
+      }
+
+      await instance.openPairingModal();
+    } catch (error) {
+      console.error("Connection failed:", error);
+      dispatch(setLoading(false));
+
+      if (error instanceof Error) {
+        if (error.message.includes("Socket stalled")) {
+          alert("WalletConnect relay issue. Please check your connection.");
+        } else {
+          alert("Failed to connect wallet. Please try again.");
+        }
+      }
+    }
+  };
+
+  const disconnect = () => {
+    try {
+      // Only run on client side
+      if (typeof window === "undefined") return;
+
+      const instance = getHashConnectInstance();
+      instance.disconnect();
+      dispatch(setDisconnected());
+    } catch (error) {
+      console.error("Disconnect failed:", error);
+      dispatch(setDisconnected());
+    }
+  };
+
+  return {
+    isConnected,
+    accountId,
+    isLoading,
+    connect,
+    disconnect,
+  };
 };
 
 export default useHashConnect;

@@ -6,6 +6,7 @@ import useHashConnect from "../page/useHashConnect";
 import Back from "./shared/back";
 // import { goggleicon } from "../assets/images";
 import { hederalogo } from "../assets/images";
+import { getConnectedAccountIds } from "../hashconnect";
 
 import {
   RiEyeOffFill,
@@ -15,6 +16,7 @@ import {
 } from "react-icons/ri";
 
 import { useAuthContext } from "../context/AuthContext";
+import { setLoading } from "../store/hashconnectSlice";
 
 export default function Screen5() {
   const navigate = useNavigate();
@@ -193,21 +195,6 @@ export default function Screen5() {
           ? err.message
           : "Something went wrong. Please try again.";
       setError(errorMessage);
-
-      // Fallback: if backend actually registered user but failed to respond in time
-      /* if (
-        errorMessage.includes("Network") ||
-        errorMessage.includes("timeout")
-      ) {
-        setTimeout(() => {
-          navigate("/success", {
-            state: {
-              message: "Registration completed (delayed backend response).",
-              username,
-            },
-          });
-        }, 1500);
-      } */
     } finally {
       setIsLoading(false);
       console.log("=== Registration Process Completed ===");
@@ -220,8 +207,9 @@ export default function Screen5() {
   }; */
 
   // NEW: Hedera Wallet Connection Handler
-  const handleHederaSignIn = async () => {
+  /* const handleHederaSignIn = async () => {
     console.log("=== Starting Hedera Wallet Sign-In ===");
+    setLoading(true)
     setError("");
 
     try {
@@ -244,6 +232,39 @@ export default function Screen5() {
         err instanceof Error ? err.message : "Failed to connect Hedera wallet"
       );
     }
+  }; */
+
+  const handleHederaSignIn = async () => {
+    console.log("🔹 Initiating Hedera sign-in...");
+    setLoading(true);
+    setError("");
+
+    try {
+      // 1️⃣ Trigger HashConnect pairing modal
+      await connect();
+
+      // 2️⃣ Wait a few seconds to allow pairing (HashPack modal opens)
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      // 3️⃣ Get connected Hedera account IDs
+      const connectedAccounts = getConnectedAccountIds();
+      console.log("✅ Connected Hedera accounts:", connectedAccounts);
+
+      if (!connectedAccounts || connectedAccounts.length === 0) {
+        throw new Error("No Hedera accounts connected");
+      }
+
+      const hederaAccountId = connectedAccounts[0].toString();
+      console.log("✅ Hedera Account ID:", hederaAccountId);
+
+      // 4️⃣ Save to backend API
+      await saveHederaAccountToAPI(hederaAccountId);
+    } catch (err) {
+      console.error("❌ Hedera sign-in failed:", err);
+      setError(err instanceof Error ? err.message : "Wallet connection failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // NEW: Function to save Hedera account to your API
@@ -252,6 +273,21 @@ export default function Screen5() {
     setIsLoading(true);
 
     try {
+      const { getConnectedAccountIds } = await import("../hashconnect");
+
+      // const instance = getHashConnectInstance();
+
+      const connectedAccounts = getConnectedAccountIds();
+
+      console.log("Connected Accounts:", connectedAccounts);
+
+      const publicKey =
+        connectedAccounts && connectedAccounts.length > 0
+          ? connectedAccounts[0]
+          : "unknown-public-key";
+
+      console.log("Hedera Public Key Retrieved:", publicKey);
+
       const response = await fetch(
         "https://team-7-api.onrender.com/connect-hedera/",
         {
@@ -261,7 +297,7 @@ export default function Screen5() {
           },
           body: JSON.stringify({
             hedera_account_id: hederaAccountId,
-            public_key: "string", // Replace with actual public key if available
+            public_key: publicKey,
           }),
         }
       );
@@ -279,6 +315,7 @@ export default function Screen5() {
 
       // Store Hedera account info
       localStorage.setItem("hederaAccountId", hederaAccountId);
+      localStorage.setItem("hederaPublicKey", publicKey);
       localStorage.setItem("hederaConnected", "true");
 
       // Navigate to screen7
@@ -286,6 +323,7 @@ export default function Screen5() {
         state: {
           message: "Hedera wallet connected successfully!",
           hederaAccountId: hederaAccountId,
+          publicKey,
         },
       });
     } catch (err) {
