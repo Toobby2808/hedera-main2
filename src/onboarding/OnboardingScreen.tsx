@@ -31,7 +31,7 @@ export default function OnboardingScreen({
       <motion.img
         src={image}
         alt={title}
-        className="w-full h-[50vh] mt-10 mb-4 object-contain"
+        className="w-full h-[37vh] md:h-[50vh] mt-10 mb-4 object-contain"
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.6 }}
