@@ -9,7 +9,7 @@ export default function screen7() {
 
   const user = location.state?.user;
 
-  const handleGoToDashboard = () => {
+  const handleGoToLogin = () => {
     if (user) {
       // ✅ Immediately set user context so dashboard has it
       setUser({
@@ -25,7 +25,7 @@ export default function screen7() {
     }
 
     // ✅ Navigate to actual dashboard, not login
-    navigate("/dashboard");
+    navigate("/login");
   };
 
   return (
@@ -42,10 +42,10 @@ export default function screen7() {
         </div>
         <div className="w-full pb-8">
           <button
-            onClick={handleGoToDashboard}
+            onClick={handleGoToLogin}
             className="bg-white text-[#00C317] text-xl w-full p-4 font-semibold  rounded-full"
           >
-            Go to Dashboard
+            Continue to Login
           </button>
         </div>
       </div>
