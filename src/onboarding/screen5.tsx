@@ -84,6 +84,7 @@ export default function Screen5() {
 
     return null;
   };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("=== Starting Registration ===");
@@ -181,7 +182,7 @@ export default function Screen5() {
       navigate("/success", {
         state: {
           message: "Registration successful! Welcome to Hedera.",
-          username: userData.username,
+          user: userData,
         },
       });
     } catch (err) {
@@ -194,7 +195,7 @@ export default function Screen5() {
       setError(errorMessage);
 
       // Fallback: if backend actually registered user but failed to respond in time
-      if (
+      /* if (
         errorMessage.includes("Network") ||
         errorMessage.includes("timeout")
       ) {
@@ -206,7 +207,7 @@ export default function Screen5() {
             },
           });
         }, 1500);
-      }
+      } */
     } finally {
       setIsLoading(false);
       console.log("=== Registration Process Completed ===");
