@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import useHashConnect, {
-  checkHashpackAvailability,
-} from "../page/useHashConnect";
+import useHashConnect from "../page/useHashConnect";
 
-// import { backarrow } from "../assets/images";
 import Back from "./shared/back";
-// import { goggleicon } from "../assets/images";
 import { hederalogo } from "../assets/images";
-//import { getConnectedAccountIds } from "../hashconnect";
 
 import {
   RiEyeOffFill,
@@ -209,7 +204,7 @@ export default function Screen5() {
   }; */
 
   // NEW: Hedera Wallet Connection Handler
-  /* const handleHederaSignIn = async () => {
+  const handleHederaSignIn = async () => {
     console.log("=== Starting Hedera Wallet Sign-In ===");
     setError("");
 
@@ -225,69 +220,6 @@ export default function Screen5() {
 
       // Step 2: If already connected, proceed with API call
       if (isConnected && accountId) {
-        await saveHederaAccountToAPI(accountId);
-      }
-    } catch (err) {
-      console.error("Hedera sign-in error:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to connect Hedera wallet"
-      );
-    }
-  }; */
-
-  const handleHederaSignIn = async () => {
-    console.log("=== Starting Hedera Wallet Sign-In ===");
-    setError("");
-
-    try {
-      const userAgent =
-        navigator.userAgent || navigator.vendor || (window as any).opera;
-      const isAndroid = /android/i.test(userAgent);
-      const isIOS = /iPad|iPhone|iPod/.test(userAgent);
-
-      // If not connected, attempt mobile deep link first
-      if (!isConnected) {
-        console.log("Attempting to open HashPack...");
-
-        const deepLink = isAndroid
-          ? "hashpack://app"
-          : isIOS
-          ? "hashpack://app"
-          : null;
-
-        if (deepLink) {
-          // Attempt deep link
-          const start = Date.now();
-          window.location.href = deepLink;
-
-          // Fallback after 2 seconds if app didn't open
-          setTimeout(() => {
-            if (Date.now() - start < 2100) {
-              if (isAndroid) {
-                console.log("Redirecting to Google Play Store...");
-                window.location.href =
-                  "https://play.google.com/store/apps/details?id=app.hashpack.wallet";
-              } else if (isIOS) {
-                console.log("Redirecting to Apple App Store...");
-                window.location.href =
-                  "https://apps.apple.com/app/hashpack-wallet/id1608827031";
-              } else {
-                console.log("Redirecting to HashPack browser extension...");
-                window.open("https://www.hashpack.app/download", "_blank");
-              }
-            }
-          }, 2000);
-        } else {
-          console.log("Connecting via browser extension...");
-          await connect();
-        }
-
-        return;
-      }
-
-      // If already connected, save the account
-      if (isConnected && accountId) {
-        console.log("Connected with account:", accountId);
         await saveHederaAccountToAPI(accountId);
       }
     } catch (err) {
