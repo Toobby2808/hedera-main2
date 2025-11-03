@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import useHashConnect from "../page/useHashConnect";
+import useHashConnect, {
+  checkHashpackAvailability,
+} from "../page/useHashConnect";
 
 // import { backarrow } from "../assets/images";
 import Back from "./shared/back";
@@ -209,7 +211,6 @@ export default function Screen5() {
   // NEW: Hedera Wallet Connection Handler
   /* const handleHederaSignIn = async () => {
     console.log("=== Starting Hedera Wallet Sign-In ===");
-    setLoading(true)
     setError("");
 
     try {
@@ -235,83 +236,50 @@ export default function Screen5() {
   }; */
 
   const handleHederaSignIn = async () => {
-    console.log("🚀 Starting Hedera Wallet Sign-In");
+    console.log("=== Starting Hedera Wallet Sign-In ===");
     setError("");
 
     try {
-      // ✅ Detect platform
-      const userAgent =
-        typeof navigator !== "undefined"
-          ? navigator.userAgent || navigator.vendor || (window as any).opera
-          : "";
+      // 1️⃣ Check what platform we're on and if wallet is available
+      const availability = checkHashpackAvailability();
+      console.log("HashPack availability:", availability);
 
-      const isAndroid = /android/i.test(userAgent);
-      const isIOS =
-        /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
-      const isMobile = isAndroid || isIOS;
+      // 2️⃣ If no wallet detected, redirect based on platform
+      if (availability === "none") {
+        const userAgent =
+          navigator.userAgent || navigator.vendor || (window as any).opera;
 
-      // ✅ Detect if HashPack extension or provider is available
-      const hasHashPack =
-        typeof window !== "undefined" &&
-        ((window as any).hashconnect || (window as any).hederaWallet);
-
-      // ✅ CASE 1 — No HashPack found → redirect to install
-      if (!hasHashPack) {
-        console.log("❌ HashPack not detected. Redirecting user...");
-        if (isAndroid) {
+        if (/android/i.test(userAgent)) {
+          console.log("Redirecting to Google Play Store...");
           window.location.href =
             "https://play.google.com/store/apps/details?id=app.hashpack.wallet";
-        } else if (isIOS) {
+          return;
+        } else if (/iPad|iPhone|iPod/.test(userAgent)) {
+          console.log("Redirecting to Apple App Store...");
           window.location.href =
-            "https://apps.apple.com/app/hashpack/id1609256663";
+            "https://apps.apple.com/app/hashpack-wallet/id1608827031";
+          return;
         } else {
+          console.log("Redirecting to HashPack browser extension...");
           window.open("https://www.hashpack.app/download", "_blank");
+          return;
         }
-        return;
       }
 
-      // ✅ CASE 2 — Mobile users → Try opening HashPack via deep link (only on real mobile)
-      if (isMobile && !window.matchMedia("(min-width: 768px)").matches) {
-        console.log("📱 Real mobile detected. Attempting deep link...");
-
-        const deepLink = "hashpack://pair";
-        const fallbackUrl = isAndroid
-          ? "https://play.google.com/store/apps/details?id=app.hashpack.wallet"
-          : "https://apps.apple.com/app/hashpack/id1609256663";
-
-        const start = Date.now();
-        const timeout = setTimeout(() => {
-          const elapsed = Date.now() - start;
-          if (elapsed < 3000) {
-            console.log("App not detected — redirecting to store");
-            window.location.href = fallbackUrl;
-          }
-        }, 1500);
-
-        // Try to open the app
-        window.location.href = deepLink;
-
-        // Cancel fallback if user switched to app
-        window.addEventListener("visibilitychange", () => {
-          if (document.visibilityState === "hidden") clearTimeout(timeout);
-        });
-        return;
-      }
-
-      // ✅ CASE 3 — Desktop: open HashConnect modal
+      // 3️⃣ Connect to wallet
       if (!isConnected) {
-        console.log("💻 Opening pairing modal...");
+        console.log("Connecting to Hedera wallet...");
         await connect();
-        return;
+        return; // Wait for connect effect to update state
       }
 
-      // ✅ CASE 4 — Already connected: save to backend
+      // 4️⃣ Already connected — proceed to save account
       if (isConnected && accountId) {
-        console.log("✅ Wallet connected:", accountId);
+        console.log("Connected with account:", accountId);
         await saveHederaAccountToAPI(accountId);
       }
     } catch (err) {
-      console.error("⚠ Hedera sign-in error:", err);
+      console.error("Hedera sign-in error:", err);
       setError(
         err instanceof Error ? err.message : "Failed to connect Hedera wallet"
       );
@@ -324,21 +292,6 @@ export default function Screen5() {
     setIsLoading(true);
 
     try {
-      const { getConnectedAccountIds } = await import("../hashconnect");
-
-      // const instance = getHashConnectInstance();
-
-      const connectedAccounts = getConnectedAccountIds();
-
-      console.log("Connected Accounts:", connectedAccounts);
-
-      const publicKey =
-        connectedAccounts && connectedAccounts.length > 0
-          ? connectedAccounts[0]
-          : "unknown-public-key";
-
-      console.log("Hedera Public Key Retrieved:", publicKey);
-
       const response = await fetch(
         "https://team-7-api.onrender.com/connect-hedera/",
         {
@@ -348,7 +301,7 @@ export default function Screen5() {
           },
           body: JSON.stringify({
             hedera_account_id: hederaAccountId,
-            public_key: publicKey,
+            public_key: "string", // Replace with actual public key if available
           }),
         }
       );
@@ -366,7 +319,6 @@ export default function Screen5() {
 
       // Store Hedera account info
       localStorage.setItem("hederaAccountId", hederaAccountId);
-      localStorage.setItem("hederaPublicKey", publicKey);
       localStorage.setItem("hederaConnected", "true");
 
       // Navigate to screen7
@@ -374,7 +326,6 @@ export default function Screen5() {
         state: {
           message: "Hedera wallet connected successfully!",
           hederaAccountId: hederaAccountId,
-          publicKey,
         },
       });
     } catch (err) {

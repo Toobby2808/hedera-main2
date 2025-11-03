@@ -110,6 +110,33 @@ import {
   getConnectedAccountIds,
 } from "../hashconnect";
 
+// Utility: Check if HashPack wallet is installed on device
+export const checkHashpackAvailability = (): "mobile" | "desktop" | "none" => {
+  if (typeof window === "undefined") return "none";
+
+  const userAgent =
+    navigator.userAgent || navigator.vendor || (window as any).opera;
+
+  // Check mobile platforms
+  const isAndroid = /android/i.test(userAgent);
+  const isIOS =
+    /iPad|iPhone|iPod/.test(userAgent) || (navigator as any).msStream;
+
+  // Check for HashPack on mobile
+  const isHashpackMobileInstalled =
+    document.querySelector('meta[name="hashconnect-mobile"]') !== null;
+
+  // Desktop usually has HashPack extension
+  const isDesktop =
+    typeof (window as any).hedera !== "undefined" ||
+    (window as any).hashconnect !== undefined;
+
+  if (isDesktop) return "desktop";
+  if (isHashpackMobileInstalled) return "mobile";
+  if (isAndroid || isIOS) return "none"; // User is on mobile but no wallet
+  return "none";
+};
+
 const useHashConnect = () => {
   const dispatch = useDispatch();
   const hashconnectState = useSelector((state: RootState) => state.hashconnect);
@@ -197,92 +224,21 @@ const useHashConnect = () => {
     setupHashConnect();
   }, [dispatch]);
 
-  /* const connect = async () => {
-        dispatch(setLoading(true));
-        try {
-            // Only run on client side
-            if (typeof window === 'undefined') return;
-
-            console.log("Attempting to connect to wallet...");
-            const instance = getHashConnectInstance();
-
-            // Try to reinitialize if needed
-            try {
-                await getInitPromise();
-            } catch (initError) {
-                console.log('Reinitializing HashConnect...');
-                // If init failed, try to initialize again
-                await hc.init();
-            }
-
-            await instance.openPairingModal();
-        } catch (error) {
-            console.error('Connection failed:', error);
-            dispatch(setLoading(false));
-
-            // Provide more helpful error message
-            if (error instanceof Error) {
-                if (error.message.includes('Socket stalled')) {
-                    alert('Connection issue with WalletConnect relay. Please check your internet connection and try again.');
-                } else {
-                    alert('Failed to connect wallet. Please try again.');
-                }
-            }
-        }
-    }; */
-
   const connect = async () => {
     dispatch(setLoading(true));
-
     try {
+      // Only run on client side
       if (typeof window === "undefined") return;
 
       console.log("Attempting to connect to wallet...");
       const instance = getHashConnectInstance();
 
-      // --- 🧭 Detect platform (mobile vs desktop)
-      const userAgent =
-        navigator.userAgent || navigator.vendor || (window as any).opera;
-      const isAndroid = /android/i.test(userAgent);
-      const isIOS = /iPad|iPhone|iPod/.test(userAgent);
-      const isMobile = isAndroid || isIOS;
-
-      // --- 🧩 Check if wallet extension/app is installed
-      const hasWalletExtension =
-        typeof (window as any).hashconnect !== "undefined" ||
-        typeof (window as any).hederaWallet !== "undefined" ||
-        typeof (window as any).walletConnect !== "undefined";
-
-      if (!hasWalletExtension) {
-        console.log("No wallet detected on this device");
-
-        // --- 📱 If mobile, redirect to store
-        if (isMobile) {
-          const walletDownloadURL = isIOS
-            ? "https://apps.apple.com/app/hashpack-wallet/id1604843360" // Example for HashPack
-            : "https://play.google.com/store/apps/details?id=com.hashpack.wallet"; // Android
-
-          alert("No wallet app detected. Redirecting you to download it...");
-          window.open(walletDownloadURL, "_blank");
-          dispatch(setLoading(false));
-          return;
-        } else {
-          // --- 💻 Desktop user: open wallet download page
-          const walletExtensionURL = "https://www.hashpack.app/download";
-          alert(
-            "No Hedera wallet extension found. Redirecting to download page..."
-          );
-          window.open(walletExtensionURL, "_blank");
-          dispatch(setLoading(false));
-          return;
-        }
-      }
-
-      // --- ⚙ If wallet exists, continue connection
+      // Try to reinitialize if needed
       try {
         await getInitPromise();
-      } catch {
+      } catch (initError) {
         console.log("Reinitializing HashConnect...");
+        // If init failed, try to initialize again
         await hc.init();
       }
 
@@ -291,9 +247,12 @@ const useHashConnect = () => {
       console.error("Connection failed:", error);
       dispatch(setLoading(false));
 
+      // Provide more helpful error message
       if (error instanceof Error) {
         if (error.message.includes("Socket stalled")) {
-          alert("WalletConnect relay issue. Please check your connection.");
+          alert(
+            "Connection issue with WalletConnect relay. Please check your internet connection and try again."
+          );
         } else {
           alert("Failed to connect wallet. Please try again.");
         }
