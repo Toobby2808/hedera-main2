@@ -6,7 +6,7 @@ import useHashConnect from "../page/useHashConnect";
 import Back from "./shared/back";
 // import { goggleicon } from "../assets/images";
 import { hederalogo } from "../assets/images";
-import { getConnectedAccountIds } from "../hashconnect";
+//import { getConnectedAccountIds } from "../hashconnect";
 
 import {
   RiEyeOffFill,
@@ -16,7 +16,7 @@ import {
 } from "react-icons/ri";
 
 import { useAuthContext } from "../context/AuthContext";
-import { setLoading } from "../store/hashconnectSlice";
+//import { setLoading } from "../store/hashconnectSlice";
 
 export default function Screen5() {
   const navigate = useNavigate();
@@ -235,35 +235,86 @@ export default function Screen5() {
   }; */
 
   const handleHederaSignIn = async () => {
-    console.log("🔹 Initiating Hedera sign-in...");
-    setLoading(true);
+    console.log("🚀 Starting Hedera Wallet Sign-In");
     setError("");
 
     try {
-      // 1️⃣ Trigger HashConnect pairing modal
-      await connect();
+      // ✅ Detect platform
+      const userAgent =
+        typeof navigator !== "undefined"
+          ? navigator.userAgent || navigator.vendor || (window as any).opera
+          : "";
 
-      // 2️⃣ Wait a few seconds to allow pairing (HashPack modal opens)
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      const isAndroid = /android/i.test(userAgent);
+      const isIOS =
+        /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
+      const isMobile = isAndroid || isIOS;
 
-      // 3️⃣ Get connected Hedera account IDs
-      const connectedAccounts = getConnectedAccountIds();
-      console.log("✅ Connected Hedera accounts:", connectedAccounts);
+      // ✅ Detect if HashPack extension or provider is available
+      const hasHashPack =
+        typeof window !== "undefined" &&
+        ((window as any).hashconnect || (window as any).hederaWallet);
 
-      if (!connectedAccounts || connectedAccounts.length === 0) {
-        throw new Error("No Hedera accounts connected");
+      // ✅ CASE 1 — No HashPack found → redirect to install
+      if (!hasHashPack) {
+        console.log("❌ HashPack not detected. Redirecting user...");
+        if (isAndroid) {
+          window.location.href =
+            "https://play.google.com/store/apps/details?id=app.hashpack.wallet";
+        } else if (isIOS) {
+          window.location.href =
+            "https://apps.apple.com/app/hashpack/id1609256663";
+        } else {
+          window.open("https://www.hashpack.app/download", "_blank");
+        }
+        return;
       }
 
-      const hederaAccountId = connectedAccounts[0].toString();
-      console.log("✅ Hedera Account ID:", hederaAccountId);
+      // ✅ CASE 2 — Mobile users → Try opening HashPack via deep link (only on real mobile)
+      if (isMobile && !window.matchMedia("(min-width: 768px)").matches) {
+        console.log("📱 Real mobile detected. Attempting deep link...");
 
-      // 4️⃣ Save to backend API
-      await saveHederaAccountToAPI(hederaAccountId);
+        const deepLink = "hashpack://pair";
+        const fallbackUrl = isAndroid
+          ? "https://play.google.com/store/apps/details?id=app.hashpack.wallet"
+          : "https://apps.apple.com/app/hashpack/id1609256663";
+
+        const start = Date.now();
+        const timeout = setTimeout(() => {
+          const elapsed = Date.now() - start;
+          if (elapsed < 3000) {
+            console.log("App not detected — redirecting to store");
+            window.location.href = fallbackUrl;
+          }
+        }, 1500);
+
+        // Try to open the app
+        window.location.href = deepLink;
+
+        // Cancel fallback if user switched to app
+        window.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "hidden") clearTimeout(timeout);
+        });
+        return;
+      }
+
+      // ✅ CASE 3 — Desktop: open HashConnect modal
+      if (!isConnected) {
+        console.log("💻 Opening pairing modal...");
+        await connect();
+        return;
+      }
+
+      // ✅ CASE 4 — Already connected: save to backend
+      if (isConnected && accountId) {
+        console.log("✅ Wallet connected:", accountId);
+        await saveHederaAccountToAPI(accountId);
+      }
     } catch (err) {
-      console.error("❌ Hedera sign-in failed:", err);
-      setError(err instanceof Error ? err.message : "Wallet connection failed");
-    } finally {
-      setLoading(false);
+      console.error("⚠ Hedera sign-in error:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to connect Hedera wallet"
+      );
     }
   };
 
