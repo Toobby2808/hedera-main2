@@ -12,7 +12,7 @@ import { useAuthContext } from "../context/AuthContext";
 export default function Screen6() {
   const navigate = useNavigate();
 
-  const { setUser, setToken } = useAuthContext();
+  const { setUser, setToken, logout } = useAuthContext();
 
   // Form state
   const [email, setEmail] = useState("");
@@ -49,6 +49,7 @@ export default function Screen6() {
   // LOGIN FUNCTION
 
   const handleLogin = async () => {
+    logout();
     console.log("=== Starting Login ===");
 
     setError("");
@@ -174,7 +175,7 @@ export default function Screen6() {
     <div className="h-screen bg-linear-to-br from-emerald-50 to-teal-50 w-full px-4 py-12 flex flex-col justify-between">
       <div>
         <Back
-          image={backarrow}
+          /* image={backarrow} */
           title="Welcome Back"
           text="Glad to have you back! Please enter your email and password to continue"
         />
@@ -203,8 +204,8 @@ export default function Screen6() {
               className="w-full p-4 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               disabled={isLoading}
             />
-            <span className="absolute text-pri right-4 top-1/2 -translate-y-1/2">
-              <RiMailFill size={25} />
+            <span className="absolute text-black/64 right-4 top-1/2 -translate-y-1/2">
+              <RiMailFill size={20} />
             </span>
           </div>
 
@@ -230,12 +231,12 @@ export default function Screen6() {
             />
             <span
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-4 top-1/2 text-pri -translate-y-1/2"
+              className="absolute right-4 top-1/2 text-black/64 -translate-y-1/2"
             >
               {showPassword ? (
-                <RiEyeOffFill className="w-5 h-5 cursor-pointer" />
-              ) : (
                 <RiEyeFill className="w-5 h-5 cursor-pointer" />
+              ) : (
+                <RiEyeOffFill className="w-5 h-5 cursor-pointer" />
               )}
             </span>
           </div>

@@ -4,8 +4,10 @@ import { useEffect } from "react";
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
-import Screen1 from "./onboarding/screen1";
-import Screen2 from "./onboarding/screen2";
+// import Screen1 from "./onboarding/screen1";
+// import Screen2 from "./onboarding/screen2";
+// import O from "./onboarding/SplashScreen";
+import Onboarding from "./onboarding/Onboarding";
 
 import "./App.css";
 
@@ -56,7 +58,6 @@ function App() {
     //       <Route path="/login" element={<Screen6 />} />
     //       <Route path="/success" element={<Screen7 />} />
 
-
     //       <Route path="*" element={<Navigate to="/" replace />} />
     //     </Routes>
     //   </BrowserRouter>
@@ -66,8 +67,10 @@ function App() {
       <BrowserRouter>
         <Routes>
           {/* Onboarding flow */}
-          <Route path="/" element={<Screen1 />} />
-          <Route path="/welcome" element={<Screen2 />} />
+          {/* <Route path="/" element={<Screen1 />} />
+          <Route path="/welcome" element={<Screen2 />} /> */}
+          <Route path="/" element={<Onboarding />} />
+
           {/* <Route path="/auth" element={<AuthScreen />} /> */}
           {/* <Route path="/verify-code" element={<Screen4 />} /> */}
           <Route path="/signup" element={<Screen5 />} />
@@ -83,7 +86,6 @@ function App() {
           <Route path="/edit-profile" element={<EditProfilePage />} />
           <Route path="/book-market" element={<BookMarketplacePage />} />
           <Route path="/reader/:id" element={<ReaderPage />} />
-
 
           <Route path="/book/:id" element={<BookDetailPage />} />
 

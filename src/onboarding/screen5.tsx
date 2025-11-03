@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useHashConnect from "../page/useHashConnect";
 
-import { backarrow } from "../assets/images";
+// import { backarrow } from "../assets/images";
 import Back from "./shared/back";
 // import { goggleicon } from "../assets/images";
 import { hederalogo } from "../assets/images";
@@ -320,7 +320,7 @@ export default function Screen5() {
     <div className="h-screen bg-linear-to-br from-emerald-50 to-teal-50 w-full px-4 py-12 flex flex-col justify-between overflow-y-auto">
       <div>
         <Back
-          image={backarrow}
+          /* image={backarrow} */
           title="Get Started"
           text="Please kindly enter the username of your choice, a valid email address and password to access your account"
         />
@@ -343,8 +343,8 @@ export default function Screen5() {
               className="w-full p-4 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               disabled={isLoading}
             />
-            <span className="absolute right-4 text-pri top-1/2 -translate-y-1/2">
-              <RiUserAddFill size={25} />
+            <span className="absolute right-4 text-black/64 top-1/2 -translate-y-1/2">
+              <RiUserAddFill size={20} />
             </span>
           </div>
 
@@ -363,8 +363,8 @@ export default function Screen5() {
               className="w-full p-4 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               disabled={isLoading}
             />
-            <span className="absolute right-4 text-pri top-1/2 -translate-y-1/2">
-              <RiMailFill size={25} />
+            <span className="absolute right-4 text-black/64 top-1/2 -translate-y-1/2">
+              <RiMailFill size={20} />
             </span>
           </div>
 
@@ -385,12 +385,12 @@ export default function Screen5() {
             />
             <span
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-4 top-1/2 text-pri -translate-y-1/2"
+              className="absolute right-4 top-1/2 text-black/64 -translate-y-1/2"
             >
               {showPassword ? (
-                <RiEyeOffFill className="w-5 h-5 cursor-pointer" />
-              ) : (
                 <RiEyeFill className="w-5 h-5 cursor-pointer" />
+              ) : (
+                <RiEyeOffFill className="w-5 h-5 cursor-pointer" />
               )}
             </span>
           </div>
@@ -412,12 +412,12 @@ export default function Screen5() {
             />
             <span
               onClick={() => setShowConfirmPassword((prev) => !prev)}
-              className="absolute text-pri right-4 top-1/2 -translate-y-1/2"
+              className="absolute text-black/64 right-4 top-1/2 -translate-y-1/2"
             >
               {showConfirmPassword ? (
-                <RiEyeOffFill className="w-5 h-5 cursor-pointer" />
-              ) : (
                 <RiEyeFill className="w-5 h-5 cursor-pointer" />
+              ) : (
+                <RiEyeOffFill className="w-5 h-5 cursor-pointer" />
               )}
             </span>
           </div>

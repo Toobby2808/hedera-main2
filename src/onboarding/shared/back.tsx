@@ -1,22 +1,22 @@
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 
 interface backProps {
   title?: string;
   text?: string;
   image?: string;
-  onButtonClick?: () => void;
+  // onButtonClick?: () => void;
 }
 
-export default function Back({ title, text, image, onButtonClick }: backProps) {
-  const navigate = useNavigate();
+export default function Back({ title, text }: backProps) {
+  // const navigate = useNavigate();
   return (
     <div className="py-4">
-      <button
+      {/* <button
         className="pb-10"
-        onClick={onButtonClick ? onButtonClick : () => navigate(-1)}
+       onClick={onButtonClick ? onButtonClick : () => navigate(-1)}
       >
         <img src={image} alt="back-icon" />
-      </button>
+      </button> */}
 
       <div className="flex flex-col gap-5">
         <h2 className="font-extrabold text-2xl">{title}</h2>
