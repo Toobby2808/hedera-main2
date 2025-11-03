@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { backarrow } from "../assets/images";
+import useHashConnect from "../page/useHashConnect";
+
 import Back from "./shared/back";
 // import { goggleicon } from "../assets/images";
 import { hederalogo } from "../assets/images";
@@ -11,6 +12,13 @@ import { useAuthContext } from "../context/AuthContext";
 
 export default function Screen6() {
   const navigate = useNavigate();
+
+  const {
+    isConnected,
+    accountId,
+    isLoading: isWalletLoading,
+    connect,
+  } = useHashConnect();
 
   const { setUser, setToken, logout } = useAuthContext();
 
@@ -160,10 +168,82 @@ export default function Screen6() {
     setError("Google sign-in is not yet implemented");
   };
  */
-  const handleHederaSignIn = () => {
-    console.log("Hedera sign-in clicked");
-    setError("Hedera sign-in is not yet implemented");
+  const handleHederaSignIn = async () => {
+    console.log("=== Starting Hedera Wallet Sign-In (Login) ===");
+    setError("");
+    setSuccess("");
+
+    try {
+      // 1️⃣ If not connected yet, trigger wallet connection
+      if (!isConnected) {
+        console.log("Connecting to Hedera wallet...");
+        await connect();
+        return;
+      }
+
+      // 2️⃣ Already connected → Authenticate with API
+      if (isConnected && accountId) {
+        console.log("Wallet already connected:", accountId);
+        await loginWithHederaAccount(accountId);
+      }
+    } catch (err) {
+      console.error("Hedera login error:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to connect Hedera wallet"
+      );
+    }
   };
+
+  const loginWithHederaAccount = async (hederaAccountId: string) => {
+    console.log("Logging in with Hedera account:", hederaAccountId);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(
+        "https://team-7-api.onrender.com/login-hedera/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hedera_account_id: hederaAccountId }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        console.error("Hedera login failed:", data);
+        throw new Error(data.message || "Failed to log in with Hedera wallet");
+      }
+
+      const data = await response.json();
+      console.log("✅ Hedera login success:", data);
+
+      const token = data.token || data.access_token || null;
+      const userData = data.user || {};
+
+      if (token) {
+        localStorage.setItem("authToken", token);
+        localStorage.setItem("user", JSON.stringify(userData));
+        setUser(userData);
+        setSuccess("Login successful! Redirecting...");
+      }
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
+    } catch (err) {
+      console.error("Login with Hedera error:", err);
+      setError(err instanceof Error ? err.message : "Login with Hedera failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isConnected && accountId && !isLoading) {
+      console.log("Hedera wallet detected, proceeding to login:", accountId);
+      loginWithHederaAccount(accountId);
+    }
+  }, [isConnected, accountId]);
 
   const handleRegisterClick = () => {
     console.log("Register clicked");
@@ -278,13 +358,17 @@ export default function Screen6() {
         {/* Hedera Button */}
         <button
           onClick={handleHederaSignIn}
-          disabled={isLoading}
+          disabled={isLoading || isWalletLoading}
           className="bg-white mb-2 flex items-center justify-center gap-4 text-xl w-full p-4 font-semibold text-black rounded-full border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50"
         >
           <span className="w-6 h-6">
             <img src={hederalogo} alt="Hedera logo" />
           </span>
-          Continue with Hedera
+          {isWalletLoading
+            ? "Connecting ..."
+            : isConnected
+            ? `Connected: ${accountId?.slice(0, 6)}...${accountId?.slice(-4)}`
+            : "Continue with Hedera"}
         </button>
 
         {/* Google Button */}
