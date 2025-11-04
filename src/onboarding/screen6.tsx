@@ -326,21 +326,30 @@ export default function Screen6() {
   };
 
   useEffect(() => {
-    if (isConnected && accountId && !isLoading && hashConnectData) {
-      console.log("Hedera wallet detected, proceeding to login:", accountId);
+    if (isConnected && accountId && hashConnectData && !isLoading) {
+      console.log("🔗 Hedera wallet detected, proceeding to login:", accountId);
 
+      // Try to extract the public key safely
       const pubKey =
-        hashConnectData?.pairingData?.[0]?.metadata?.publicKey ||
-        hashConnectData?.savedPairings?.[0]?.metadata?.publicKey;
+        hashConnectData?.metadata?.publicKey ||
+        hashConnectData?.accountInfo?.publicKey ||
+        hashConnectData?.accountIds?.[0]?.toString() ||
+        null;
 
       if (!pubKey) {
-        console.error("⚠ Public key not found in pairing data.");
+        console.error(
+          "⚠ Public key not found in hashConnectData:",
+          hashConnectData
+        );
+        setError("Public key not found. Please reconnect wallet.");
         return;
       }
 
+      // Login with both accountId and publicKey
       loginWithHederaAccount(accountId, pubKey);
     }
   }, [isConnected, accountId, hashConnectData, isLoading]);
+
   const handleRegisterClick = () => {
     console.log("Register clicked");
     // Navigate to registration screen

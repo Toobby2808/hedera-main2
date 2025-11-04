@@ -158,7 +158,7 @@ const useHashConnect = () => {
         console.log("Initializing HashConnect...");
 
         // Wait for HashConnect to initialize with timeout
-        const instance = getHashConnectInstance();
+        const instance: any = getHashConnectInstance();
 
         // Add timeout to prevent indefinite waiting
         const initPromise = getInitPromise();
@@ -173,11 +173,18 @@ const useHashConnect = () => {
         console.log("HashConnect initialized successfully");
 
         // Set up event listeners
-        setHashConnectData(instance);
+        //setHashConnectData(instance);
+        const savedPairingData =
+          instance?.hcData?.pairingData?.[0] ||
+          instance?.state?.pairingData?.[0] ||
+          null;
+
+        setHashConnectData(savedPairingData);
 
         instance.pairingEvent.on((pairingData: any) => {
           console.log("Pairing event:", pairingData);
-          setHashConnectData(pairingData);
+          setHashConnectData(pairingData.pairingData?.[0] || pairingData);
+
           const accountIds = getConnectedAccountIds();
           if (accountIds && accountIds.length > 0) {
             dispatch(
