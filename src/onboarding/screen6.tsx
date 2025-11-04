@@ -239,7 +239,7 @@ export default function Screen6() {
     }
   }; */
 
-  const handleHederaSignIn = async () => {
+  /* const handleHederaSignIn = async () => {
     console.log("=== Starting Hedera Wallet Sign-In (Login) ===");
     setError("");
     setSuccess("");
@@ -268,9 +268,9 @@ export default function Screen6() {
         err instanceof Error ? err.message : "Failed to connect Hedera wallet"
       );
     }
-  };
+  }; */
 
-  const loginWithHederaAccount = async (
+  /* const loginWithHederaAccount = async (
     hederaAccountId: string,
     publicKey: string
   ) => {
@@ -323,9 +323,9 @@ export default function Screen6() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }; */
 
-  useEffect(() => {
+  /*  useEffect(() => {
     if (isConnected && accountId && hashConnectData && !isLoading) {
       console.log("🔗 Hedera wallet detected, proceeding to login:", accountId);
 
@@ -348,7 +348,112 @@ export default function Screen6() {
       // Login with both accountId and publicKey
       loginWithHederaAccount(accountId, pubKey);
     }
-  }, [isConnected, accountId, hashConnectData, isLoading]);
+  }, [isConnected, accountId, hashConnectData, isLoading]); */
+
+  const handleHederaSignIn = async () => {
+    console.log("=== Starting Hedera Wallet Sign-In (Login) ===");
+    setError("");
+    setSuccess("");
+
+    try {
+      // 1️⃣ Connect wallet if not yet connected
+      if (!isConnected) {
+        console.log("Connecting to Hedera wallet...");
+        await connect();
+        return;
+      }
+
+      // 2️⃣ Already connected → attempt login
+      if (isConnected && accountId && hashConnectData) {
+        console.log("Wallet connected:", accountId);
+
+        const pairingData = hashConnectData.pairingData?.[0];
+        const pubKey =
+          pairingData?.metadata?.publicKey ||
+          pairingData?.accountIds?.[0] ||
+          null;
+
+        if (!pubKey) {
+          throw new Error(
+            "Public key not found. Please reconnect your wallet."
+          );
+        }
+
+        await loginWithHederaAccount(accountId, pubKey);
+      }
+    } catch (err) {
+      console.error("Hedera login error:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to connect Hedera wallet"
+      );
+    }
+  };
+
+  const loginWithHederaAccount = async (
+    hederaAccountId: string,
+    publicKey: string
+  ) => {
+    console.log("Logging in with Hedera account:", hederaAccountId, publicKey);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(
+        "https://team-7-api.onrender.com/connect-hedera/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            hedera_account_id: hederaAccountId,
+            public_key: publicKey,
+          }),
+        }
+      );
+
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error("Server returned non-JSON:", text);
+        throw new Error("Unexpected response from server (not JSON)");
+      }
+
+      if (!response.ok) {
+        console.error("Hedera login failed:", data);
+        throw new Error(data.message || "Failed to log in with Hedera wallet");
+      }
+
+      console.log("✅ Hedera login success:", data);
+
+      const token = data.token || data.access_token || data.access || null;
+      const userData = data.user || {};
+
+      if (!token) {
+        throw new Error("No token received from backend after login.");
+      }
+
+      // ✅ Save token + user data
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
+      setToken(token);
+
+      setSuccess("Login successful! Redirecting...");
+      setTimeout(() => navigate("/dashboard"), 1000);
+    } catch (err) {
+      console.error("Login with Hedera error:", err);
+      setError(err instanceof Error ? err.message : "Login with Hedera failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 🧩 No auto-login on connect — only log the event
+  useEffect(() => {
+    if (isConnected && accountId) {
+      console.log("🔗 Hedera wallet connected:", accountId);
+    }
+  }, [isConnected, accountId]);
 
   const handleRegisterClick = () => {
     console.log("Register clicked");
