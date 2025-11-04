@@ -95,7 +95,7 @@
 
 // export default useHashConnect;
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../store";
 import {
@@ -143,6 +143,8 @@ const useHashConnect = () => {
   const { isConnected, accountId, isLoading } = hashconnectState;
   const setupAttempted = useRef(false);
 
+  const [hashConnectData, setHashConnectData] = useState<any>(null); // State to hold HashConnect data
+
   useEffect(() => {
     // Prevent multiple setup attempts
     if (setupAttempted.current) return;
@@ -171,8 +173,11 @@ const useHashConnect = () => {
         console.log("HashConnect initialized successfully");
 
         // Set up event listeners
+        setHashConnectData(instance);
+
         instance.pairingEvent.on((pairingData: any) => {
           console.log("Pairing event:", pairingData);
+          setHashConnectData(pairingData);
           const accountIds = getConnectedAccountIds();
           if (accountIds && accountIds.length > 0) {
             dispatch(
@@ -185,6 +190,7 @@ const useHashConnect = () => {
 
         instance.disconnectionEvent.on(() => {
           console.log("Disconnection event");
+          setHashConnectData(null);
           dispatch(setDisconnected());
         });
 
@@ -267,6 +273,7 @@ const useHashConnect = () => {
 
       const instance = getHashConnectInstance();
       instance.disconnect();
+      setHashConnectData(null);
       dispatch(setDisconnected());
     } catch (error) {
       console.error("Disconnect failed:", error);
@@ -280,6 +287,7 @@ const useHashConnect = () => {
     isLoading,
     connect,
     disconnect,
+    hashConnectData,
   };
 };
 

@@ -18,6 +18,7 @@ export default function Screen6() {
     accountId,
     isLoading: isWalletLoading,
     connect,
+    hashConnectData,
   } = useHashConnect();
 
   const { setUser, setToken, logout } = useAuthContext();
@@ -168,7 +169,7 @@ export default function Screen6() {
     setError("Google sign-in is not yet implemented");
   };
  */
-  const handleHederaSignIn = async () => {
+  /*  const handleHederaSignIn = async () => {
     console.log("=== Starting Hedera Wallet Sign-In (Login) ===");
     setError("");
     setSuccess("");
@@ -236,15 +237,110 @@ export default function Screen6() {
     } finally {
       setIsLoading(false);
     }
+  }; */
+
+  const handleHederaSignIn = async () => {
+    console.log("=== Starting Hedera Wallet Sign-In (Login) ===");
+    setError("");
+    setSuccess("");
+
+    try {
+      // 1️⃣ If not connected yet, trigger wallet connection
+      if (!isConnected) {
+        console.log("Connecting to Hedera wallet...");
+        await connect();
+        return;
+      }
+
+      // 2️⃣ Already connected → Authenticate with API
+      if (isConnected && accountId && hashConnectData) {
+        console.log("Wallet already connected:", accountId);
+        const pubKey = hashConnectData.pairingData?.[0]?.metadata?.publicKey;
+
+        if (!pubKey)
+          throw new Error("Public key not found. Please reconnect wallet.");
+
+        await loginWithHederaAccount(accountId, pubKey);
+      }
+    } catch (err) {
+      console.error("Hedera login error:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to connect Hedera wallet"
+      );
+    }
+  };
+
+  const loginWithHederaAccount = async (
+    hederaAccountId: string,
+    publicKey: string
+  ) => {
+    console.log("Logging in with Hedera account:", hederaAccountId, publicKey);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(
+        "https://team-7-api.onrender.com/connect-hedera/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            hedera_account_id: hederaAccountId,
+            public_key: publicKey,
+          }),
+        }
+      );
+
+      // ✅ Handle non-JSON responses gracefully
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error("Server returned non-JSON:", text);
+        throw new Error("Unexpected server response (not JSON)");
+      }
+
+      if (!response.ok) {
+        console.error("Hedera login failed:", data);
+        throw new Error(data.message || "Failed to log in with Hedera wallet");
+      }
+
+      console.log("✅ Hedera login success:", data);
+
+      const token = data.token || data.access_token || null;
+      const userData = data.user || {};
+
+      if (token) {
+        localStorage.setItem("authToken", token);
+        localStorage.setItem("user", JSON.stringify(userData));
+        setUser(userData);
+        setSuccess("Login successful! Redirecting...");
+        setTimeout(() => navigate("/dashboard"), 1000);
+      }
+    } catch (err) {
+      console.error("Login with Hedera error:", err);
+      setError(err instanceof Error ? err.message : "Login with Hedera failed");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
-    if (isConnected && accountId && !isLoading) {
+    if (isConnected && accountId && !isLoading && hashConnectData) {
       console.log("Hedera wallet detected, proceeding to login:", accountId);
-      loginWithHederaAccount(accountId);
-    }
-  }, [isConnected, accountId]);
 
+      const pubKey =
+        hashConnectData?.pairingData?.[0]?.metadata?.publicKey ||
+        hashConnectData?.savedPairings?.[0]?.metadata?.publicKey;
+
+      if (!pubKey) {
+        console.error("⚠ Public key not found in pairing data.");
+        return;
+      }
+
+      loginWithHederaAccount(accountId, pubKey);
+    }
+  }, [isConnected, accountId, hashConnectData, isLoading]);
   const handleRegisterClick = () => {
     console.log("Register clicked");
     // Navigate to registration screen
