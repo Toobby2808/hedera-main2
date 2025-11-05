@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useHashConnect from "../page/useHashConnect";
 
@@ -171,40 +171,66 @@ export default function Screen6() {
  */
 
   const handleHederaSignIn = async () => {
-    console.log("=== Starting Hedera Wallet Sign-In (Login) ===");
+    console.log("=== Starting Hedera Wallet Sign-In ===");
     setError("");
     setSuccess("");
 
     try {
-      // 1️⃣ Connect wallet if not yet connected
+      // 1️⃣ Ensure connection is established
       if (!isConnected) {
-        console.log("Connecting to Hedera wallet...");
+        console.log("🟡 Connecting to Hedera wallet...");
         await connect();
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // wait for connection state update
+        await new Promise((r) => setTimeout(r, 2000)); // wait for wallet connection to complete
       }
 
-      // 2️⃣ Already connected → attempt login
-      if (isConnected && accountId && hashConnectData) {
-        console.log("Wallet connected:", accountId);
+      // 2️⃣ Read pairing data correctly
+      const pairingData = hashConnectData?.pairingData?.[0];
+      const hederaAccountId =
+        accountId ||
+        pairingData?.accountIds?.[0] ||
+        pairingData?.metadata?.accountId;
+      let publicKey =
+        pairingData?.metadata?.publicKey ||
+        hashConnectData?.topic ||
+        accountId ||
+        "";
 
-        const pairingData = hashConnectData.pairingData?.[0];
-        const pubKey =
-          pairingData?.metadata?.publicKey ||
-          pairingData?.accountIds?.[0] ||
-          null;
+      if (!publicKey || publicKey.trim() === "") {
+        console.warn(
+          "⚠ No public key found in pairing metadata. Using fallback extraction."
+        );
 
-        if (!pubKey) {
-          throw new Error(
-            "Public key not found. Please reconnect your wallet."
+        try {
+          const savedData = JSON.parse(
+            localStorage.getItem("hashconnectData") || "{}"
           );
+          publicKey =
+            savedData?.pairingData?.[0]?.metadata?.publicKey ||
+            savedData?.pairingData?.[0]?.accountIds?.[0] ||
+            "";
+        } catch (err) {
+          console.error("⚠ Could not read saved pairing data:", err);
         }
-
-        await loginWithHederaAccount(accountId, pubKey);
       }
+
+      console.log("📋 Pairing Data:", pairingData);
+      console.log("🆔 Hedera Account ID:", hederaAccountId);
+      console.log("🔑 Public Key:", publicKey);
+
+      // 3️⃣ Validate both values before calling backend
+      if (!hederaAccountId)
+        throw new Error("No Hedera account found. Please reconnect wallet.");
+      if (!publicKey)
+        throw new Error("No public key found. Please reconnect wallet.");
+
+      // 4️⃣ Continue to backend authentication
+      await loginWithHederaAccount(hederaAccountId, publicKey);
     } catch (err) {
-      console.error("Hedera login error:", err);
+      console.error("❌ handleHederaSignIn error:", err);
       setError(
-        err instanceof Error ? err.message : "Failed to connect Hedera wallet"
+        err instanceof Error
+          ? err.message
+          : "Failed to connect to Hedera wallet"
       );
     }
   };
@@ -213,8 +239,14 @@ export default function Screen6() {
     hederaAccountId: string,
     publicKey: string
   ) => {
-    console.log("Logging in with Hedera account:", hederaAccountId, publicKey);
+    console.log("📡 Sending to backend:", {
+      hedera_account_id: hederaAccountId,
+      public_key: publicKey,
+    });
+
     setIsLoading(true);
+    setError("");
+    setSuccess("");
 
     try {
       const response = await fetch(
@@ -224,42 +256,42 @@ export default function Screen6() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             hedera_account_id: hederaAccountId,
-            publickey: publicKey,
+            public_key: publicKey,
           }),
         }
       );
 
-      const text = await response.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        console.error("Server returned non-JSON:", text);
-        throw new Error("Unexpected response from server (not JSON)");
-      }
-
+      const data = await response.json();
       if (!response.ok) {
-        console.error("Hedera login failed:", data);
-        throw new Error(data.message || "Failed to log in with Hedera wallet");
+        throw new Error(data.message || "Failed to log in with Hedera wallet.");
       }
 
       console.log("✅ Hedera login success:", data);
 
-      const token = data.token || data.access_token || data.access || null;
+      const token = data.token || data.access || data.access_token;
       const userData = data.user || {};
 
-      if (!token) {
-        throw new Error("No token received from backend after login.");
-      }
+      if (!token) throw new Error("No token returned from backend.");
 
-      // ✅ Save token + user data
+      // Normalize again for consistency
+      const normalizedUser = {
+        id: userData.id || "",
+        username: userData.username || "",
+        email: userData.email || "",
+        first_name: userData.first_name || "",
+        last_name: userData.last_name || "",
+        wallet_id: userData.wallet_id || hederaAccountId,
+        ...userData,
+      };
+
       localStorage.setItem("authToken", token);
-      localStorage.setItem("user", JSON.stringify(userData));
-      setUser(userData);
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
+
+      setUser(normalizedUser);
       setToken(token);
 
       setSuccess("Login successful! Redirecting...");
-      setTimeout(() => navigate("/dashboard"), 1000);
+      setTimeout(() => navigate("/dashboard"), 1200);
     } catch (err) {
       console.error("Login with Hedera error:", err);
       setError(err instanceof Error ? err.message : "Login with Hedera failed");
@@ -267,31 +299,19 @@ export default function Screen6() {
       setIsLoading(false);
     }
   };
-  useEffect(() => {
-    if (
-      isConnected &&
-      accountId &&
-      hashConnectData?.pairingData?.length > 0 &&
-      !isLoading
-    ) {
-      console.log("🔗 Wallet connected — logging in automatically:", accountId);
 
-      // Wait 1 tick to let pairingData populate fully
-      setTimeout(() => {
-        const pairingData = hashConnectData.pairingData?.[0];
-        const pubKey =
-          pairingData?.metadata?.publicKey ||
-          pairingData?.accountIds?.[0] ||
-          null;
+  /* useEffect(() => {
+    if (isConnected && accountId && hashConnectData?.pairingData?.length > 0) {
+      const pairingData = hashConnectData.pairingData[0];
+      const publicKey =
+        pairingData?.metadata?.publicKey ||
+        pairingData?.accountIds?.[0] ||
+        accountId;
 
-        if (pubKey) {
-          loginWithHederaAccount(accountId, pubKey);
-        } else {
-          console.error("⚠ No public key found after connect");
-        }
-      }, 300); // tiny delay ensures pairing metadata is ready
+      console.log("🔁 Auto-login on wallet connect:", accountId);
+      if (publicKey) loginWithHederaAccount(accountId, publicKey);
     }
-  }, [isConnected, accountId, hashConnectData]);
+  }, [isConnected, accountId]); */
 
   const handleRegisterClick = () => {
     console.log("Register clicked");

@@ -231,7 +231,7 @@ export default function Screen5() {
   };
 
   // NEW: Function to save Hedera account to your API
-  const saveHederaAccountToAPI = async (hederaAccountId: string) => {
+  /* const saveHederaAccountToAPI = async (hederaAccountId: string) => {
     console.log("Saving Hedera account to API...");
     setIsLoading(true);
 
@@ -245,7 +245,7 @@ export default function Screen5() {
           },
           body: JSON.stringify({
             hedera_account_id: hederaAccountId,
-            publickey: "string", // Replace with actual public key if available
+            public_key: "string", // Replace with actual public key if available
           }),
         }
       );
@@ -266,10 +266,79 @@ export default function Screen5() {
       localStorage.setItem("hederaConnected", "true");
 
       // Navigate to screen7
-      navigate("/dashboard", {
+      navigate("/success", {
         state: {
           message: "Hedera wallet connected successfully!",
           hederaAccountId: hederaAccountId,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to save Hedera account:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to save Hedera account"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }; */
+
+  // ✅ FIXED: Function to save Hedera account to your API
+  const saveHederaAccountToAPI = async (hederaAccountId: string) => {
+    console.log("Saving Hedera account to API...");
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(
+        "https://team-7-api.onrender.com/connect-hedera/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            hedera_account_id: hederaAccountId,
+            public_key: "string", // Replace if you have the real key
+          }),
+        }
+      );
+
+      console.log("Hedera API response status:", response.status);
+
+      const data = await response.json();
+      console.log("Hedera account saved successfully:", data);
+
+      if (!response.ok) {
+        console.error("Hedera API error:", data);
+        throw new Error(data.message || "Failed to save Hedera account");
+      }
+
+      // ✅ Extract token and user properly
+      const token = data.access || data.token || null;
+      const userData = data.user || null;
+
+      if (!userData) {
+        throw new Error("No user data returned from Hedera API");
+      }
+
+      // ✅ Save to localStorage
+      if (token) localStorage.setItem("authToken", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("hederaAccountId", hederaAccountId);
+      localStorage.setItem("hederaConnected", "true");
+
+      // ✅ Update AuthContext (if available)
+      setUser({
+        id: userData.id,
+        name: userData.username || userData.email?.split("@")[0] || "User",
+        email: userData.email,
+        profilePic: userData.profile_pic || "",
+        preferences: {},
+      });
+
+      // ✅ Navigate with user included
+      navigate("/success", {
+        state: {
+          message: "Hedera wallet connected successfully!",
+          user: userData,
+          token,
         },
       });
     } catch (err) {
