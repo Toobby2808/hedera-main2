@@ -268,12 +268,22 @@ export default function Screen6() {
     }
   };
 
-  // 🧩 No auto-login on connect — only log the event
   useEffect(() => {
-    if (isConnected && accountId) {
-      console.log("🔗 Hedera wallet connected:", accountId);
+    if (isConnected && accountId && hashConnectData && !isLoading) {
+      console.log("🔗 Wallet connected — logging in automatically:", accountId);
+      const pairingData = hashConnectData.pairingData?.[0];
+      const pubKey =
+        pairingData?.metadata?.publicKey ||
+        pairingData?.accountIds?.[0] ||
+        null;
+
+      if (pubKey) {
+        loginWithHederaAccount(accountId, pubKey);
+      } else {
+        console.error("⚠ No public key found after connect");
+      }
     }
-  }, [isConnected, accountId]);
+  }, [isConnected, accountId, hashConnectData]);
 
   const handleRegisterClick = () => {
     console.log("Register clicked");
