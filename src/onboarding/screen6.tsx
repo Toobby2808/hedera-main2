@@ -267,21 +267,29 @@ export default function Screen6() {
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
-    if (isConnected && accountId && hashConnectData && !isLoading) {
+    if (
+      isConnected &&
+      accountId &&
+      hashConnectData?.pairingData?.length > 0 &&
+      !isLoading
+    ) {
       console.log("🔗 Wallet connected — logging in automatically:", accountId);
-      const pairingData = hashConnectData.pairingData?.[0];
-      const pubKey =
-        pairingData?.metadata?.publicKey ||
-        pairingData?.accountIds?.[0] ||
-        null;
 
-      if (pubKey) {
-        loginWithHederaAccount(accountId, pubKey);
-      } else {
-        console.error("⚠ No public key found after connect");
-      }
+      // Wait 1 tick to let pairingData populate fully
+      setTimeout(() => {
+        const pairingData = hashConnectData.pairingData?.[0];
+        const pubKey =
+          pairingData?.metadata?.publicKey ||
+          pairingData?.accountIds?.[0] ||
+          null;
+
+        if (pubKey) {
+          loginWithHederaAccount(accountId, pubKey);
+        } else {
+          console.error("⚠ No public key found after connect");
+        }
+      }, 300); // tiny delay ensures pairing metadata is ready
     }
   }, [isConnected, accountId, hashConnectData]);
 
