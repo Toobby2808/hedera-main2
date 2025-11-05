@@ -224,7 +224,7 @@ export default function Screen6() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             hedera_account_id: hederaAccountId,
-            public_key: publicKey,
+            publickey: publicKey,
           }),
         }
       );
