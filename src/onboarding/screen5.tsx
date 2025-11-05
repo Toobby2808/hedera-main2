@@ -245,7 +245,7 @@ export default function Screen5() {
           },
           body: JSON.stringify({
             hedera_account_id: hederaAccountId,
-            public_key: "string", // Replace with actual public key if available
+            publickey: "string", // Replace with actual public key if available
           }),
         }
       );
@@ -266,7 +266,7 @@ export default function Screen5() {
       localStorage.setItem("hederaConnected", "true");
 
       // Navigate to screen7
-      navigate("/success", {
+      navigate("/dashboard", {
         state: {
           message: "Hedera wallet connected successfully!",
           hederaAccountId: hederaAccountId,
