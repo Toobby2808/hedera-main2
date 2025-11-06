@@ -230,60 +230,8 @@ export default function Screen5() {
     }
   };
 
-  // NEW: Function to save Hedera account to your API
+  // Function to save Hedera account to your API
   /* const saveHederaAccountToAPI = async (hederaAccountId: string) => {
-    console.log("Saving Hedera account to API...");
-    setIsLoading(true);
-
-    try {
-      const response = await fetch(
-        "https://team-7-api.onrender.com/connect-hedera/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            hedera_account_id: hederaAccountId,
-            public_key: "string", // Replace with actual public key if available
-          }),
-        }
-      );
-
-      console.log("Hedera API response status:", response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Hedera API error:", errorData);
-        throw new Error(errorData.message || "Failed to save Hedera account");
-      }
-
-      const data = await response.json();
-      console.log("Hedera account saved successfully:", data);
-
-      // Store Hedera account info
-      localStorage.setItem("hederaAccountId", hederaAccountId);
-      localStorage.setItem("hederaConnected", "true");
-
-      // Navigate to screen7
-      navigate("/success", {
-        state: {
-          message: "Hedera wallet connected successfully!",
-          hederaAccountId: hederaAccountId,
-        },
-      });
-    } catch (err) {
-      console.error("Failed to save Hedera account:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to save Hedera account"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }; */
-
-  // ✅ FIXED: Function to save Hedera account to your API
-  const saveHederaAccountToAPI = async (hederaAccountId: string) => {
     console.log("Saving Hedera account to API...");
     setIsLoading(true);
 
@@ -345,6 +293,92 @@ export default function Screen5() {
       console.error("Failed to save Hedera account:", err);
       setError(
         err instanceof Error ? err.message : "Failed to save Hedera account"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }; */
+
+  // ✅ UPDATED: Function to register new Hedera user with backend
+  // This now uses the new /register-hedera/ endpoint as shown in your documentation
+  const saveHederaAccountToAPI = async (hederaAccountId: string) => {
+    console.log("Saving Hedera account to API (register-hedera)...");
+    setIsLoading(true);
+
+    try {
+      const generatedUsername = `user_${hederaAccountId.replace(/\./g, "_")}`;
+      const generatedEmail = `${hederaAccountId}@hedera.user`;
+
+      // 🟩 STEP 1: Prepare request payload according to backend spec
+      const payload = {
+        username: generatedUsername, // from the form
+        email: generatedEmail, // from the form
+        password: `HederaPass_${Math.random().toString(36).slice(-8)}`, // generate a random password
+        hedera_account_id: hederaAccountId, // from wallet connection
+        hedera_public_key: "string", // TODO: replace with actual public key when available
+      };
+
+      console.log("📦 Sending payload:", payload);
+
+      // 🟩 STEP 2: Send POST request to the new endpoint
+      const response = await fetch(
+        "https://team-7-api.onrender.com/register-hedera/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      console.log("Hedera API response status:", response.status);
+
+      // 🟩 STEP 3: Parse JSON response
+      const data = await response.json();
+      console.log("🟢 Hedera account registered successfully:", data);
+
+      // 🟥 STEP 4: Handle non-OK responses
+      if (!response.ok) {
+        console.error("❌ Hedera API error:", data);
+        throw new Error(data.message || "Failed to register Hedera account");
+      }
+
+      // 🟩 STEP 5: Extract user info
+      const token = data.token || data.access_token || null;
+      const userData = data.user || {
+        username: data.username || username,
+        email: data.email || email,
+        password: data.password,
+        hedera_account_id: data.hedera_account_id,
+        hedera_public_key: data.hedera_public_key,
+      };
+
+      // 🟩 STEP 6: Save user + Hedera data locally
+      if (token) localStorage.setItem("authToken", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("hederaAccountId", data.hedera_account_id);
+      localStorage.setItem("hederaConnected", "true");
+
+      // 🟩 STEP 7: Update global user context
+      setUser({
+        id: userData.id || Date.now(),
+        name: userData.username,
+        email: userData.email,
+        profilePic: userData.profile_pic || "",
+        preferences: {},
+      });
+
+      // 🟩 STEP 8: Navigate to success page
+      navigate("/success", {
+        state: {
+          message: "Hedera wallet registered successfully!",
+          user: userData,
+          token,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to register Hedera account:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to register Hedera account"
       );
     } finally {
       setIsLoading(false);

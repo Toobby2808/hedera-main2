@@ -345,7 +345,7 @@ const Dashboard: React.FC = () => {
 
   // Keep original balance string variable used throughout your markup
   const balance = `${displayBalance}`;
-
+  /* 
   // ---------- Connect flow triggered from modal ----------
   const handleModalConnect = async () => {
     try {
@@ -403,6 +403,63 @@ const Dashboard: React.FC = () => {
         err instanceof Error ? err.message : "Failed to connect wallet"
       );
       // re-open modal to allow attempt again
+      setTimeout(() => setShowConnectModal(true), 800);
+    }
+  }; */
+
+  // ---------- Connect flow triggered from modal ----------
+  const handleModalConnect = async () => {
+    try {
+      setShowConnectModal(false);
+      await connect();
+
+      // Wait briefly for useHashConnect hook to update
+      await new Promise((r) => setTimeout(r, 1000));
+
+      const pairingData = hashConnectData?.pairingData?.[0];
+      const acctId = accountId || pairingData?.accountIds?.[0] || null;
+      const pubKey =
+        pairingData?.metadata?.publicKey || pairingData?.publicKey || "string";
+
+      if (!acctId) {
+        setTimeout(() => setShowConnectModal(true), 800);
+        throw new Error("No Hedera account detected after connect.");
+      }
+
+      // Call backend to attach Hedera account
+      const res = await fetch(`${API_BASE}/connect-hedera/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          hedera_account_id: acctId,
+          public_key: pubKey,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.message || "Failed to connect Hedera wallet");
+      }
+
+      // Update user profile locally
+      const updatedUser = {
+        ...(user || {}),
+        hedera_account_id: acctId,
+        hedera_public_key: pubKey,
+      };
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      setWalletAddr(acctId);
+      setShowConnectModal(false);
+    } catch (err) {
+      console.error("Modal connect error:", err);
+      setWalletError(
+        err instanceof Error ? err.message : "Failed to connect wallet"
+      );
       setTimeout(() => setShowConnectModal(true), 800);
     }
   };
@@ -748,16 +805,16 @@ const Dashboard: React.FC = () => {
 
             <div className="flex gap-3">
               <button
-                onClick={handleModalConnect}
-                className="flex-1 bg-pri transition ease-out hover:bg-green-600 text-white py-2 rounded-md font-semibold"
-              >
-                Connect Wallet
-              </button>
-              <button
                 onClick={() => setShowConnectModal(false)}
                 className="flex-1 bg-gray-100 text-gray-800 py-2 rounded-md"
               >
                 Cancel
+              </button>
+              <button
+                onClick={handleModalConnect}
+                className="flex-1 bg-pri transition ease-out hover:bg-green-600 text-white py-2 rounded-md font-semibold"
+              >
+                Connect Wallet
               </button>
             </div>
 
