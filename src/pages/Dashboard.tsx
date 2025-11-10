@@ -427,7 +427,7 @@ const Dashboard: React.FC = () => {
       }
 
       // Call backend to attach Hedera account
-      const res = await fetch(`${API_BASE}/connect-hedera/`, {
+      const res = await fetch(`${API_BASE}/profile/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -455,6 +455,8 @@ const Dashboard: React.FC = () => {
 
       setWalletAddr(acctId);
       setShowConnectModal(false);
+
+      window.dispatchEvent(new Event("walletConnected"));
     } catch (err) {
       console.error("Modal connect error:", err);
       setWalletError(
@@ -470,6 +472,36 @@ const Dashboard: React.FC = () => {
     : user?.hedera_account_id
     ? formatAccountIdShort(user.hedera_account_id)
     : "Not connected";
+
+  // 🔁 Auto-sync wallet display if user or accountId updates
+  useEffect(() => {
+    // If user or hashconnect just updated the account, reflect instantly
+    if (accountId && walletAddr !== accountId) {
+      setWalletAddr(accountId);
+    } else if (
+      user?.hedera_account_id &&
+      walletAddr !== user.hedera_account_id
+    ) {
+      setWalletAddr(user.hedera_account_id);
+    }
+  }, [accountId, user?.hedera_account_id]);
+
+  useEffect(() => {
+    const handleWalletUpdated = () => {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        if (parsed?.hedera_account_id) {
+          setUser(parsed);
+          setWalletAddr(parsed.hedera_account_id);
+        }
+      }
+    };
+
+    window.addEventListener("wallet-updated", handleWalletUpdated);
+    return () =>
+      window.removeEventListener("wallet-updated", handleWalletUpdated);
+  }, []);
 
   return (
     <div className="min-h-screen bg-linear-to-b from-green-50 to-white px-4 sm:p-6 lg:p-10 font-sans text-grey">
