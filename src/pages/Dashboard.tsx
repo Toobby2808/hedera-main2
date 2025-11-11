@@ -52,7 +52,7 @@ const Dashboard: React.FC = () => {
 
   // reward balance state loaded from reward API
   const [rewardBalance, setRewardBalance] = useState<number | null>(null);
-  const [loadingBalance, setLoadingBalance] = useState(false);
+  const [, /* loadingBalance */ setLoadingBalance] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
 
   // wallet fetch state + connect modal
@@ -204,7 +204,7 @@ const Dashboard: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authToken, fetchWallet, accountId, isConnected, user, walletAddr]);
 
-  // ---------- Reward balance (your existing code) ----------
+  // ---------- Reward balance ----------
   const fetchRewardBalance = async () => {
     if (!authToken) {
       setBalanceError("Not authenticated");
@@ -341,7 +341,7 @@ const Dashboard: React.FC = () => {
         throw new Error(data?.message || "Failed to connect Hedera wallet");
       }
 
-      // --- NEW: Re-fetch wallet from backend to ensure authoritative state (and avoid race) ---
+      // --- Re-fetch wallet from backend to ensure authoritative state (and avoid race) ---
       // This ensures any backend processing/propagation is captured, and prevents UI reversion.
       await fetchWallet();
 
@@ -365,7 +365,7 @@ const Dashboard: React.FC = () => {
         setWalletAddr(acctId);
       }
 
-      // --- NEW: Dispatch a stable event name other parts of the app may listen to ---
+      // --- Dispatch a stable event name other parts of the app may listen to ---
       // Use 'wallet-updated' as canonical event name; also emit the older 'walletConnected' for compatibility.
       window.dispatchEvent(new Event("wallet-updated"));
       window.dispatchEvent(new Event("walletConnected"));
@@ -407,7 +407,7 @@ const Dashboard: React.FC = () => {
     }
   }, [accountId, user?.hedera_account_id]);
 
-  // --- NEW: Global event listener for wallet updates (canonical 'wallet-updated') ---
+  // --- Global event listener for wallet updates (canonical 'wallet-updated') ---
   // This listens for events fired after successful attach and updates UI from localStorage.
   useEffect(() => {
     const handleWalletUpdated = () => {
