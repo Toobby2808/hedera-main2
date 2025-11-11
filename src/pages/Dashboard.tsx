@@ -26,45 +26,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { isConnected, accountId, connect, hashConnectData } = useHashConnect();
 
-  // Load user from localStorage if not in context
-
-  useEffect(() => {
-    // ✅ If user data is missing but token exists, fetch it fresh
-    if (token && (!user || !user.username || !user.email || !user.first_name)) {
-      const fetchUserProfile = async () => {
-        try {
-          const res = await fetch("https://team-7-api.onrender.com/profile/", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (!res.ok) throw new Error("Failed to fetch user profile");
-
-          const profileData = await res.json();
-
-          const normalizedUser = {
-            username: profileData.username || profileData.user?.username || "",
-            email: profileData.email || profileData.user?.email || "",
-            first_name:
-              profileData.first_name || profileData.user?.first_name || "",
-            last_name:
-              profileData.last_name || profileData.user?.last_name || "",
-            wallet_id: profileData.wallet_id || "",
-            ...profileData,
-          };
-
-          setUser(normalizedUser);
-          localStorage.setItem("user", JSON.stringify(normalizedUser));
-        } catch (err) {
-          console.error("🔁 Auto-profile fetch failed:", err);
-        }
-      };
-
-      fetchUserProfile(); // ✅ call it cleanly inside the effect
-    }
-  }, [token, user, setUser]);
-
+  // --- Load user from localStorage if not in context ---
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (!user && storedUser) {
@@ -129,6 +91,7 @@ const Dashboard: React.FC = () => {
 
   // ---------- Wallet fetch logic ----------
   const fetchWallet = useCallback(async () => {
+    // If not authenticated we can't fetch
     if (!authToken) {
       setWalletError("Not authenticated");
       setWalletAddr("");
@@ -153,6 +116,7 @@ const Dashboard: React.FC = () => {
         return null;
       }
 
+      // safe parse
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
@@ -178,8 +142,8 @@ const Dashboard: React.FC = () => {
         null;
 
       if (acct) {
+        // --- IMPORTANT: update both UI state and AuthContext/localStorage ---
         setWalletAddr(acct);
-        // also store into user object and localStorage if you want
         const merged = {
           ...(user || {}),
           hedera_account_id: acct,
@@ -190,6 +154,8 @@ const Dashboard: React.FC = () => {
         return { acct, pubkey };
       } else {
         setWalletAddr("");
+        // also remove from user if previously set (to keep things consistent)
+        // (optional — only remove if backend clearly reports none)
         return null;
       }
     } catch (err) {
@@ -209,14 +175,9 @@ const Dashboard: React.FC = () => {
     let cancelled = false;
 
     const run = async () => {
-      // fetch wallet info from backend
       const result = await fetchWallet();
 
-      // consider "already connected" if any one of these is true:
-      // - backend has a wallet (result?.acct)
-      // - HashConnect hook currently reports an accountId
-      // - user object (from localStorage/context) already has hedera_account_id
-      // - walletAddr state already has an address
+      // decide whether to show connect modal or not
       const alreadyConnectedLocal =
         !!result?.acct ||
         !!accountId ||
@@ -227,21 +188,20 @@ const Dashboard: React.FC = () => {
       if (cancelled) return;
 
       if (alreadyConnectedLocal) {
-        // user already connected -> hide modal
         setShowConnectModal(false);
       } else {
-        // no wallet anywhere -> show modal after a short friendly delay
+        // show modal shortly after mount if not connected anywhere
         setTimeout(() => setShowConnectModal(true), 2000);
       }
     };
 
-    // slight initial delay so UI settles
     const timer = setTimeout(run, 250);
 
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authToken, fetchWallet, accountId, isConnected, user, walletAddr]);
 
   // ---------- Reward balance (your existing code) ----------
@@ -258,14 +218,12 @@ const Dashboard: React.FC = () => {
     setBalanceError(null);
 
     try {
-      // fixed fetch string formatting (was broken in original)
       const res = await fetch(`${API_BASE}/reward/balance/`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
       });
 
-      // attempt to parse JSON safely
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
@@ -278,7 +236,6 @@ const Dashboard: React.FC = () => {
         return;
       }
 
-      // common response shapes: { balance: number } or { amount: number } etc.
       const latest =
         typeof data.balance === "number"
           ? data.balance
@@ -324,13 +281,11 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Load balance on mount and when authToken changes
   useEffect(() => {
     if (authToken) fetchRewardBalance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authToken]);
 
-  //
   // If rewardBalance available, use that; otherwise fallback to user.walletBalance or "0.00"
   const displayNumber =
     rewardBalance !== null
@@ -343,69 +298,7 @@ const Dashboard: React.FC = () => {
     ? `${displayNumber.toFixed(2)}`
     : "•••••";
 
-  // Keep original balance string variable used throughout your markup
   const balance = `${displayBalance}`;
-  /* 
-  // ---------- Connect flow triggered from modal ----------
-  const handleModalConnect = async () => {
-    try {
-      setShowConnectModal(false);
-      // call your useHashConnect's connect() which should open wallet
-      await connect();
-
-      // wait briefly for accountId/hashConnectData to be set by hook
-      await new Promise((r) => setTimeout(r, 1000));
-
-      // attempt to extract public key & account id
-      const pairingData = hashConnectData?.pairingData?.[0];
-      const pubKey =
-        pairingData?.metadata?.publicKey || pairingData?.accountIds?.[0] || "";
-      const acctId = accountId || pairingData?.accountIds?.[0] || null;
-
-      if (!acctId) {
-        // give the hook some time, otherwise show modal again
-        setTimeout(() => setShowConnectModal(true), 800);
-        throw new Error("No Hedera account detected after connect.");
-      }
-
-      // call backend to register/connect the hedera account
-      const res = await fetch(`${API_BASE}/connect-hedera/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          hedera_account_id: acctId,
-          public_key: pubKey || "string", // backend accepts "public_key" name
-        }),
-      });
-
-      const text = await res.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = null;
-      }
-
-      if (!res.ok) {
-        console.error("connect-hedera failed:", res.status, data);
-        throw new Error(data?.message || "Failed to attach Hedera wallet");
-      }
-
-      // success — wallet created on backend, refetch wallet and update UI
-      await fetchWallet();
-      setShowConnectModal(false);
-    } catch (err) {
-      console.error("Modal connect error:", err);
-      setWalletError(
-        err instanceof Error ? err.message : "Failed to connect wallet"
-      );
-      // re-open modal to allow attempt again
-      setTimeout(() => setShowConnectModal(true), 800);
-    }
-  }; */
 
   // ---------- Connect flow triggered from modal ----------
   const handleModalConnect = async () => {
@@ -416,6 +309,7 @@ const Dashboard: React.FC = () => {
       // Wait briefly for useHashConnect hook to update
       await new Promise((r) => setTimeout(r, 1000));
 
+      // Try to grab pairing/account info
       const pairingData = hashConnectData?.pairingData?.[0];
       const acctId = accountId || pairingData?.accountIds?.[0] || null;
       const pubKey =
@@ -426,7 +320,9 @@ const Dashboard: React.FC = () => {
         throw new Error("No Hedera account detected after connect.");
       }
 
-      // Call backend to attach Hedera account
+      // Call backend to attach Hedera account to user's profile
+      // NOTE: backend expects either /connect-hedera/ or /profile/ — you used /profile/ in your dashboard;
+      // kept /profile/ per your latest code. If backend expects a different path change API_BASE + '/profile/' accordingly.
       const res = await fetch(`${API_BASE}/profile/`, {
         method: "POST",
         headers: {
@@ -439,29 +335,47 @@ const Dashboard: React.FC = () => {
         }),
       });
 
+      // If backend returns non-OK, throw with its message
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.message || "Failed to connect Hedera wallet");
       }
 
-      // Update user profile locally
-      const updatedUser = {
-        ...(user || {}),
-        hedera_account_id: acctId,
-        hedera_public_key: pubKey,
-      };
-      setUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      // --- NEW: Re-fetch wallet from backend to ensure authoritative state (and avoid race) ---
+      // This ensures any backend processing/propagation is captured, and prevents UI reversion.
+      await fetchWallet();
 
-      setWalletAddr(acctId);
-      setShowConnectModal(false);
+      // Update user profile locally from latest localStorage (fetchWallet already sets localStorage)
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        if (parsed?.hedera_account_id) {
+          setUser(parsed);
+          setWalletAddr(parsed.hedera_account_id);
+        }
+      } else {
+        // fallback optimistic update if backend didn't return info
+        const updatedUser = {
+          ...(user || {}),
+          hedera_account_id: acctId,
+          hedera_public_key: pubKey,
+        };
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        setWalletAddr(acctId);
+      }
 
+      // --- NEW: Dispatch a stable event name other parts of the app may listen to ---
+      // Use 'wallet-updated' as canonical event name; also emit the older 'walletConnected' for compatibility.
+      window.dispatchEvent(new Event("wallet-updated"));
       window.dispatchEvent(new Event("walletConnected"));
+      setShowConnectModal(false);
     } catch (err) {
       console.error("Modal connect error:", err);
       setWalletError(
         err instanceof Error ? err.message : "Failed to connect wallet"
       );
+      // reopen modal to allow retry
       setTimeout(() => setShowConnectModal(true), 800);
     }
   };
@@ -475,9 +389,16 @@ const Dashboard: React.FC = () => {
 
   // 🔁 Auto-sync wallet display if user or accountId updates
   useEffect(() => {
-    // If user or hashconnect just updated the account, reflect instantly
+    // If useHashConnect has an account, prioritize it (instant)
     if (accountId && walletAddr !== accountId) {
       setWalletAddr(accountId);
+      // also keep AuthContext in sync (safe optimistic)
+      const updated = {
+        ...(user || {}),
+        hedera_account_id: accountId,
+      };
+      setUser(updated);
+      localStorage.setItem("user", JSON.stringify(updated));
     } else if (
       user?.hedera_account_id &&
       walletAddr !== user.hedera_account_id
@@ -486,6 +407,8 @@ const Dashboard: React.FC = () => {
     }
   }, [accountId, user?.hedera_account_id]);
 
+  // --- NEW: Global event listener for wallet updates (canonical 'wallet-updated') ---
+  // This listens for events fired after successful attach and updates UI from localStorage.
   useEffect(() => {
     const handleWalletUpdated = () => {
       const storedUser = localStorage.getItem("user");
@@ -498,10 +421,15 @@ const Dashboard: React.FC = () => {
       }
     };
 
+    // listen for canonical event and also older name for compatibility
     window.addEventListener("wallet-updated", handleWalletUpdated);
-    return () =>
+    window.addEventListener("walletConnected", handleWalletUpdated);
+
+    return () => {
       window.removeEventListener("wallet-updated", handleWalletUpdated);
-  }, []);
+      window.removeEventListener("walletConnected", handleWalletUpdated);
+    };
+  }, [setUser]);
 
   return (
     <div className="min-h-screen bg-linear-to-b from-green-50 to-white px-4 sm:p-6 lg:p-10 font-sans text-grey">
@@ -723,8 +651,9 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Cards: Refer & Earn, Book A Ride, Book Marketplace, Tasks and Rewards */}
+        {/* rest of UI unchanged */}
         <div className="space-y-3 mb-4">
+          {/* Refer & Earn card */}
           <div className="rounded-xl border border-pri/20 relative overflow-hidden px-3 py-3 bg-linear-to-br from-[#08240C]/20 to-[#08240C]/10 flex items-start gap-3">
             <div className="relative z-2 w-14 h-14 rounded-lg flex items-center justify-center">
               <img src={Refer1} alt="" />
@@ -793,7 +722,6 @@ const Dashboard: React.FC = () => {
           </button>
         </div>
 
-        {/* Transactions Header */}
         <TransactionsPreview />
 
         {showFilter && (
