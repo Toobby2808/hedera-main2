@@ -1,6 +1,6 @@
-import type { Books } from "../types";
+import type { Book } from "../book";
 
-export default function RelatedBookCard({ book, onClick }: { book: Books; onClick: (id: string | number) => void }) {
+export default function RelatedBookCard({ book, onClick }: { book: Book; onClick: (id: string | number) => void }) {
     return (
         <div
             onClick={() => onClick(book.id)}
