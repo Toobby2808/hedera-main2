@@ -2,11 +2,14 @@
 
 @theme {
   --color-pri: #00c317;
+  --color-primary: #00c317;
   --color-grey: #c3c3c3;
   --color-bg: #f9fafb;
   --color-text: #0f172a;
   --color-bg-dark: #0f172a;
   --color-text-dark: #f9fafb;
+  --color-border: #e6e8ec;
+  --color-border2: #e2e8f0;
 }
 
 @layer base {
@@ -21,4 +24,28 @@
     background: var(--color-bg-dark);
     color: var(--color-text-color);
   }
+}
+
+.gradient-green {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--green-gradient-start)) 0%,
+    hsl(var(--green-gradient-end)) 100%
+  );
+}
+
+.gradient-mint {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--mint-light)) 0%,
+    hsl(var(--mint-medium)) 100%
+  );
+}
+
+.gradient-header {
+  background: linear-gradient(
+    180deg,
+    hsl(140 50% 90%) 0%,
+    hsl(120 60% 98%) 100%
+  );
 }

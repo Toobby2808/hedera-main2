@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ChevronLeft, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
+import BottomNav from "../components/common/BottomNav";
 
 interface Activity {
   title?: string;
@@ -372,6 +373,7 @@ export default function RewardsPage() {
           </div>
         </div>
       )}
+      <BottomNav />
     </motion.div>
   );
 }

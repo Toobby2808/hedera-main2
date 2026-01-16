@@ -33,7 +33,7 @@ const ProfileHeader = () => {
         <div className="flex gap-5 items-center mb-4">
           <ChevronLeft
             size={28}
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate(-1)}
             className="text-black cursor-pointer"
           />
           <span className="text-black text-sm font-medium">Profile</span>

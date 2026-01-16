@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useHashConnect from "../page/useHashConnect";
 
@@ -18,7 +18,7 @@ export default function Screen6() {
     accountId,
     isLoading: isWalletLoading,
     connect,
-    hashConnectData,
+    /* hashConnectData, */
   } = useHashConnect();
 
   const { setUser, setToken, logout } = useAuthContext();
@@ -170,7 +170,7 @@ export default function Screen6() {
   };
  */
 
-  const handleHederaSignIn = async () => {
+  /*  const handleHederaSignIn = async () => {
     console.log("=== Starting Hedera Wallet Sign-In ===");
     setError("");
     setSuccess("");
@@ -233,9 +233,9 @@ export default function Screen6() {
           : "Failed to connect to Hedera wallet"
       );
     }
-  };
+  }; */
 
-  const loginWithHederaAccount = async (
+  /* const loginWithHederaAccount = async (
     hederaAccountId: string,
     publicKey: string
   ) => {
@@ -298,7 +298,7 @@ export default function Screen6() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }; */
 
   /* useEffect(() => {
     if (isConnected && accountId && hashConnectData?.pairingData?.length > 0) {
@@ -313,6 +313,126 @@ export default function Screen6() {
     }
   }, [isConnected, accountId]); */
 
+  // ✅ Connect Hedera wallet and save to backend
+  // ✅ Connect Hedera wallet and save to backend
+  const saveHederaAccountToAPI = async (
+    hederaAccountId: string,
+    publicKey: string,
+    shouldNavigate = false
+  ) => {
+    console.log("🔄 Connecting Hedera wallet to backend...");
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const payload = {
+        hedera_account_id: hederaAccountId,
+        public_key: publicKey,
+        mode: "external",
+      };
+
+      console.log("📦 Sending payload:", payload);
+
+      const response = await fetch(
+        "https://team-7-api.onrender.com/connect-hedera/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      console.log("📩 API status:", response.status);
+      const data = await response.json().catch(() => ({}));
+      console.log("📩 API body:", data);
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || "Failed to connect Hedera wallet"
+        );
+      }
+
+      // ✅ Extract token and user
+      const token = data.token || data.access || null;
+      const userData = data.user || {
+        id: data.id || Date.now(),
+        username: data.username || "User",
+        email: data.email || "",
+      };
+
+      // ✅ Save locally
+      if (token) localStorage.setItem("authToken", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("hederaAccountId", hederaAccountId);
+      localStorage.setItem("hederaPublicKey", publicKey);
+      localStorage.setItem("hederaConnected", "true");
+
+      // ✅ Update UI / context
+      setUser({
+        id: userData.id,
+        name: userData.username,
+        email: userData.email,
+        profilePic: userData.profile_pic || "",
+        preferences: {},
+      });
+
+      // ✅ Notify dashboard (live update)
+      window.dispatchEvent(new Event("user-updated"));
+      window.dispatchEvent(new Event("wallet-updated"));
+
+      // ✅ Navigate only if user explicitly triggers it
+      if (shouldNavigate) {
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      console.error("❌ Hedera connect error:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to connect Hedera wallet"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ✅ Triggered when user clicks “Continue with Hedera”
+  const handleHederaSignIn = async () => {
+    console.log("=== Starting Hedera Login ===");
+    setError("");
+
+    try {
+      if (!isConnected) {
+        console.log("🪄 Connecting to Hedera wallet...");
+        await connect(); // Opens wallet pairing UI
+        return;
+      }
+
+      if (isConnected && accountId) {
+        const publicKey =
+          window?.hashconnect?.hcData?.pairingData?.accountPublicKey ||
+          "string";
+        // ✅ This time, we tell it to navigate
+        await saveHederaAccountToAPI(accountId, publicKey, true);
+      }
+    } catch (err) {
+      console.error("⚠ handleHederaLogin error:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to connect Hedera wallet"
+      );
+    }
+  };
+
+  // ✅ Automatically connect when wallet is already paired
+  useEffect(() => {
+    if (isConnected && accountId && !isLoading) {
+      console.log("🔗 Wallet connected:", accountId);
+      const publicKey =
+        window?.hashconnect?.hcData?.pairingData?.accountPublicKey || "string";
+
+      // ✅ Do not navigate here — just ensure backend and context are synced
+      saveHederaAccountToAPI(accountId, publicKey, false);
+    }
+  }, [isConnected, accountId]);
+
   const handleRegisterClick = () => {
     console.log("Register clicked");
     // Navigate to registration screen
@@ -320,7 +440,7 @@ export default function Screen6() {
   };
 
   return (
-    <div className="h-screen bg-linear-to-br from-emerald-50 to-teal-50 w-full px-4 py-12 flex flex-col justify-between">
+    <div className="h-screen max-w-md mx-auto bg-linear-to-br from-emerald-50 to-teal-50 w-full px-4 py-12 flex flex-col justify-between">
       <div>
         <Back
           /* image={backarrow} */

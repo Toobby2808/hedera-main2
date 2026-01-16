@@ -1,8 +1,14 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuthContext } from "../context/AuthContext";
+import { ArrowLeft, GraduationCap, Car, Loader2 } from "lucide-react";
+import PrimaryButton from "../components/common/PrimaryButton";
 import useHashConnect from "../page/useHashConnect";
+import { apiService } from "../services/api";
 
-import Back from "./shared/back";
+type UserRole = "student" | "driver";
+
+import Back from "../onboarding/shared/back";
 import { hederalogo } from "../assets/images";
 
 import {
@@ -12,9 +18,7 @@ import {
   RiMailFill,
 } from "react-icons/ri";
 
-import { useAuthContext } from "../context/AuthContext";
-
-export default function Screen5() {
+export default function Register() {
   const navigate = useNavigate();
   const {
     isConnected,
@@ -22,7 +26,10 @@ export default function Screen5() {
     isLoading: isWalletLoading,
     connect,
   } = useHashConnect();
-  const { setUser } = useAuthContext();
+  const { setUser, setToken } = useAuthContext();
+
+  // Form step: 'credentials' or 'role'
+  const [step, setStep] = useState<"credentials" | "role">("credentials");
 
   // Form state
   const [username, setUsername] = useState("");
@@ -30,6 +37,7 @@ export default function Screen5() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -37,165 +45,91 @@ export default function Screen5() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Validation functions
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const validatePassword = (password: string): boolean => {
-    return password.length >= 8;
-  };
-
-  const validateForm = (): string | null => {
-    if (!username.trim()) {
-      return "Please enter a username";
-    }
-
-    if (username.length < 3) {
-      return "Username must be at least 3 characters long";
-    }
-
-    if (!email.trim()) {
-      return "Please enter your email address";
-    }
-
-    if (!validateEmail(email)) {
-      return "Please enter a valid email address";
-    }
-
-    if (!password) {
-      return "Please enter a password";
-    }
-
-    if (!validatePassword(password)) {
-      return "Password must be at least 8 characters long";
+  // Registration Handler
+  /*  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!username || !email || !password || !confirmPassword) {
+      setError("Please fill in all fields");
+      return;
     }
 
     if (password !== confirmPassword) {
-      return "Passwords do not match";
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 6 characters");
+      return;
     }
 
     if (!agreedToTerms) {
-      return "You must agree to the Terms of Service and Privacy Policy";
-    }
-
-    return null;
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("=== Starting Registration ===");
-
-    setError("");
-
-    const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
+      setError("You must agree to the terms of service");
       return;
     }
 
     setIsLoading(true);
-    setError("Registering, please wait...");
 
     try {
-      // Wake backend (non-blocking)
-      fetch("https://team-7-api.onrender.com/", { method: "GET" }).catch(() =>
-        console.warn("⚠ Warm-up request failed (ignored)")
-      );
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
-
+      // Register user without role (role will be slected on next page)
       const response = await fetch(
         "https://team-7-api.onrender.com/register/",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username: username.trim(),
-            email: email.trim().toLowerCase(),
-            password,
-            role: "student",
-          }),
-          signal: controller.signal,
+          body: JSON.stringify({ username, email, password, role: "student" }),
         }
-      ).catch((err) => {
-        console.error("Network or timeout error:", err);
-        throw new Error(
-          "Network is slow or unreachable. Please wait a few seconds and try again."
-        );
-      });
+      );
 
-      clearTimeout(timeout);
-      console.log("Response status:", response.status);
-
-      // Try to parse JSON once
-      let data: any = {};
-      try {
-        data = await response.json();
-      } catch {
-        console.warn("Response has no JSON body (possibly cold-start)");
-      }
+      const data = await response.json();
 
       if (!response.ok) {
-        console.error("Registration failed:", data);
-        let message =
-          data.message ||
-          data.error ||
-          data.detail ||
-          (response.status === 409
-            ? "Username already exists"
-            : "Registration failed. Please try again.");
-
-        if (data.username) message = "Username already taken.";
-        if (data.email) message = "Email already registered.";
-
-        throw new Error(message);
+        throw new Error(data.message || data.detail || "Registration failed");
       }
 
-      console.log("✅ Registration successful:", data);
+      // Auto-login after registration
+      const loginResponse = await fetch(
+        "https://team-7-api.onrender.com/login/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
-      // Extract user data safely
-      const token = data.token || data.access_token || null;
-      const userData = data.user || {
-        id: data.id || Date.now(),
-        username: data.username || username,
-        email: data.email || email,
-        profile_pic: data.profile_pic || "",
-      };
+      const loginData = await loginResponse.json();
 
-      if (token) localStorage.setItem("authToken", token);
-      localStorage.setItem("user", JSON.stringify(userData));
+      if (!loginResponse.ok) {
+        // Registration successful but login failed - redirect to login page
+        navigate("/login");
+        return;
+      }
+
+      // Set auth state
+      setToken(loginData.access);
       setUser({
-        id: userData.id,
-        name: userData.username,
-        email: userData.email,
-        profilePic: userData.profile_pic,
+        id: loginData.user?.id || data.id,
+        username: loginData.user?.username || username,
+        email: loginData.user?.email || email,
+        profilePic: loginData.user?.profile_pic || "",
         preferences: {},
+
+        // No role yet - will be selected on next page
       });
 
-      console.log("🎉 User saved successfully:", userData);
-
-      navigate("/select-role", {
-        state: {
-          message: "Registration successful! Welcome to Hedera.",
-          user: userData,
-        },
-      });
+      // Navigate to role selection page
+      navigate("/select-role");
     } catch (err) {
-      console.error("Registration error:", err);
-
-      const errorMessage =
+      setError(
         err instanceof Error
           ? err.message
-          : "Something went wrong. Please try again.";
-      setError(errorMessage);
+          : "Registration failed. Please try again."
+      );
     } finally {
       setIsLoading(false);
-      console.log("=== Registration Process Completed ===");
     }
-  };
+  }; */
 
   //  Hedera Wallet Connection Handler
 
@@ -308,15 +242,6 @@ export default function Screen5() {
     }
   };
 
-  useEffect(() => {
-    if (isConnected && accountId && !isLoading) {
-      const publicKey =
-        window?.hashconnect?.hcData?.pairingData?.accountPublicKey || "string";
-      console.log("Wallet connected:", accountId, publicKey);
-      saveHederaAccountToAPI(accountId, publicKey);
-    }
-  }, [isConnected, accountId]);
-
   const handleLoginClick = () => {
     console.log("Navigating to login screen");
     navigate("/login");
@@ -325,6 +250,233 @@ export default function Screen5() {
   const formatAccountId = (id: string) => {
     return ` ${id.slice(0, 6)}...${id.slice(-4)}`;
   };
+
+  const handleCredentialsSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!username || !email || !password || !confirmPassword) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
+    if (!agreedToTerms) {
+      setError("You must agree to the terms of service");
+      return;
+    }
+
+    // Move to role selection step
+    setStep("role");
+  };
+
+  const handleRoleSubmit = async () => {
+    if (!selectedRole) {
+      setError("Please select a role");
+      return;
+    }
+
+    setError("");
+    setIsLoading(true);
+
+    try {
+      // Use apiService for registration (includes role)
+      const response = await apiService.register({
+        username,
+        email,
+        password,
+        role: selectedRole,
+      });
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      // Auto-login after registration
+      const loginResponse = await apiService.login({ email, password });
+
+      if (loginResponse.error) {
+        // Registration successful but login failed - redirect to login page
+        navigate("/login");
+        return;
+      }
+
+      if (loginResponse.data) {
+        // Set auth state from login response
+        setToken(loginResponse.data.access);
+
+        const userData = {
+          id: loginResponse.data.user.id,
+          username: loginResponse.data.user.username,
+          email: loginResponse.data.user.email,
+          role: loginResponse.data.user.role,
+        };
+
+        setUser(userData);
+
+        // Also store in user_data for apiService compatibility
+        localStorage.setItem("user_data", JSON.stringify(userData));
+
+        // Navigate based on role
+        if (selectedRole === "driver") {
+          navigate("/vehicle-registration");
+        } else {
+          navigate("/dashboard");
+        }
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Registration failed. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    setStep("credentials");
+    setError("");
+  };
+
+  // Render role selection step
+  if (step === "role") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        {/* Header */}
+        <div className="gradient-header px-5 py-8">
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 text-primary-foreground/80 hover:text-primary-foreground mb-4 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back
+          </button>
+          <h1 className="text-3xl font-bold text-primary-foreground">
+            Choose Your Role
+          </h1>
+          <p className="text-primary-foreground/80 mt-2">
+            How will you use SMS?
+          </p>
+        </div>
+
+        {/* Role Selection */}
+        <div className="flex-1 px-5 py-6 flex flex-col">
+          {error && (
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive text-sm mb-6">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {/* Student Option */}
+            <button
+              type="button"
+              onClick={() => setSelectedRole("student")}
+              className={`w-full p-6 rounded-2xl border-2 transition-all text-left ${
+                selectedRole === "student"
+                  ? "border-primary bg-primary/10"
+                  : "border-border bg-white hover:border-primary/50"
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div
+                  className={`w-18 h-18 rounded-xl flex items-center justify-center ${
+                    selectedRole === "student"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <GraduationCap className="w-10 h-10" />
+                </div>
+                <div className="flex-1">
+                  <h3
+                    className={`text-lg font-bold mb-1 ${
+                      selectedRole === "student"
+                        ? "text-primary"
+                        : "text-foreground"
+                    }`}
+                  >
+                    Student
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Find drivers, book campus rides, earn rewards, and get to
+                    your destination safely.
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            {/* Driver Option */}
+            <button
+              type="button"
+              onClick={() => setSelectedRole("driver")}
+              className={`w-full p-6 rounded-2xl border-2 transition-all text-left ${
+                selectedRole === "driver"
+                  ? "border-primary bg-primary/10"
+                  : "border-border bg-white hover:border-primary/50"
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div
+                  className={`w-18 h-18 rounded-xl flex items-center justify-center ${
+                    selectedRole === "driver"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <Car className="w-10 h-10" />
+                </div>
+                <div className="flex-1">
+                  <h3
+                    className={`text-lg font-bold mb-1 ${
+                      selectedRole === "driver"
+                        ? "text-primary"
+                        : "text-foreground"
+                    }`}
+                  >
+                    Driver
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Register your vehicle, accept ride requests, and earn money
+                    by helping fellow students.
+                  </p>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          {/* Submit Button */}
+          <div className="mt-auto pt-6">
+            <PrimaryButton
+              onClick={handleRoleSubmit}
+              disabled={!selectedRole || isLoading}
+              className="w-full flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                "Create Account"
+              )}
+            </PrimaryButton>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen max-w-md mx-auto bg-linear-to-br from-emerald-50 to-teal-50 w-full px-4 py-12 flex flex-col justify-between overflow-y-auto">
@@ -337,7 +489,10 @@ export default function Screen5() {
       </div>
 
       <div className="w-full mb-4">
-        <form className="w-full flex flex-col gap-4" onSubmit={handleRegister}>
+        <form
+          className="w-full flex flex-col gap-4"
+          onSubmit={handleCredentialsSubmit}
+        >
           {/* Username Input */}
           <div className="relative w-full">
             <input
@@ -478,11 +633,11 @@ export default function Screen5() {
       <div className="">
         {/* Confirm/Register Button */}
         <button
-          onClick={handleRegister}
+          onClick={handleCredentialsSubmit}
           disabled={isLoading || isWalletLoading}
           className="bg-[#00C317] mb-2 text-xl w-full p-4 font-semibold text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-600 transition-colors"
         >
-          {isLoading ? "Creating Account..." : "Confirm"}
+          {isLoading ? "Processing..." : "Continue"}
         </button>
 
         {/* Hedera Button - NOW FUNCTIONAL */}
@@ -500,18 +655,6 @@ export default function Screen5() {
             ? `Connected: ${formatAccountId(accountId || "")}`
             : "Continue with Hedera"}
         </button>
-
-        {/* Google Button */}
-        {/* <button
-          onClick={handleGoogleSignIn}
-          disabled={isLoading || isWalletLoading}
-          className="bg-white mb-2 flex items-center justify-center gap-4 text-xl w-full p-4 font-semibold text-black rounded-full border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50"
-        >
-          <span>
-            <img src={goggleicon} alt="Google logo" />
-          </span>
-          Continue with Google
-        </button> */}
       </div>
 
       {/* Login Link */}

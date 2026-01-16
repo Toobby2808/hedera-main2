@@ -5,6 +5,7 @@ import LibraryContent from "../components/profile/LibraryContent";
 import { motion, AnimatePresence } from "framer-motion";
 import RidesContent from "../components/rides/RidesContent";
 import SettingsPage from "../components/settings/SettingsPage";
+import BottomNav from "../components/BottomNav";
 
 const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState("library");
@@ -53,6 +54,7 @@ const ProfilePage = () => {
           )}
         </AnimatePresence>
       </div>
+      <BottomNav />
     </div>
   );
 };

@@ -13,18 +13,40 @@ import Ride from "../assets/home-icons/a.svg";
 import Book from "../assets/home-icons/book.svg";
 import Task from "../assets/home-icons/task.svg";
 import { useAuthContext } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationContext";
+import NotificationPanel from "../components/common/NotificationPanel";
+import { BellIcon } from "../components/icons/Icons";
 import QRScannerModal from "../components/QRScannerModal";
+import BottomNav from "../components/common/BottomNav";
 import TransactionsPreview from "../components/transactions/TransactionsPreview";
 
-// IMPORTANT: this uses your useHashConnect hook (you said you have use-hash-connect)
+// IMPORTANT: this uses your useHashConnect hook
 import useHashConnect from "../page/useHashConnect";
 
 const API_BASE = "https://team-7-api.onrender.com";
 
 const Dashboard: React.FC = () => {
   const { user, setUser, token } = useAuthContext();
+  const { unreadCount } = useNotifications();
   const navigate = useNavigate();
   const { isConnected, accountId, connect, hashConnectData } = useHashConnect();
+
+  //  REAL FIX: Force Dashboard to always load the newest user from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+
+        // If context user is missing or outdated, update it
+        if (!user || JSON.stringify(user) !== JSON.stringify(parsed)) {
+          setUser(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to sync user from localStorage:", e);
+    }
+  }, []);
 
   // --- Load user from localStorage if not in context ---
   useEffect(() => {
@@ -33,6 +55,22 @@ const Dashboard: React.FC = () => {
       setUser(JSON.parse(storedUser));
     }
   }, [user, setUser]);
+
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      console.log("🔁 User data updated, reloading dashboard state...");
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) setUser(JSON.parse(savedUser));
+    };
+
+    window.addEventListener("user-updated", handleUserUpdate);
+    window.addEventListener("wallet-updated", handleUserUpdate);
+
+    return () => {
+      window.removeEventListener("user-updated", handleUserUpdate);
+      window.removeEventListener("wallet-updated", handleUserUpdate);
+    };
+  }, []);
 
   // Redirect to login if no user
   useEffect(() => {
@@ -59,6 +97,7 @@ const Dashboard: React.FC = () => {
   const [loadingWallet, setLoadingWallet] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // computed change values
   const [percentChange, setPercentChange] = useState<number | null>(null);
@@ -432,10 +471,10 @@ const Dashboard: React.FC = () => {
   }, [setUser]);
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-green-50 to-white px-4 sm:p-6 lg:p-10 font-sans text-grey">
-      <div className=" max-w-md mx-auto">
+    <div className="min-h-screen bg-linear-to-b from-green-50 to-white px-4 sm:p-6 sm:pt-0 lg:p-10  lg:pt-0 font-sans text-grey">
+      <div className=" max-w-md mx-auto gradient-header">
         {/* Header */}
-        <div className=" h-20 flex py-4 items-center justify-between">
+        <div className=" h-20 flex py-4 px-2 items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Avatar Section */}
             {user?.profile_image ? (
@@ -460,30 +499,25 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* HEADER RIGHT ICONS */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
             {/* bell with red dot */}
-            <button aria-label="notifications" className="relative">
-              <svg
-                width="24"
-                height="21"
-                viewBox="0 0 24 21"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M23.2526 13.5955L21.3577 7.39555C20.7508 5.22709 19.4315 3.32197 17.6091 1.98268C15.7867 0.643382 13.5657 -0.0533218 11.2987 0.0031853C9.03179 0.0596924 6.84884 0.866171 5.09648 2.29457C3.34412 3.72298 2.12279 5.69143 1.6264 7.88738L0.154964 13.8858C-0.0406087 14.6829 -0.051205 15.5136 0.123975 16.3153C0.299155 17.1171 0.655536 17.8688 1.16622 18.5139C1.67691 19.159 2.32856 19.6805 3.07199 20.0391C3.81543 20.3977 4.63123 20.584 5.45782 20.5841H18.0295C18.8817 20.5841 19.7221 20.386 20.4833 20.0058C21.2446 19.6256 21.9055 19.0737 22.4132 18.3944C22.921 17.715 23.2613 16.9272 23.4071 16.0938C23.5529 15.2605 23.5 14.4049 23.2526 13.5955Z"
-                  fill="black"
-                />
-              </svg>
-
-              <span className="absolute -top-0.5 -right-0.5 block w-3 h-3 bg-red-500 rounded-full" />
+            <button
+              onClick={() => setShowNotifications(true)}
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-muted transition-colors relative"
+            >
+              <BellIcon className="w-8 h-8 text-black" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-background text-xs text-white flex items-center justify-center font-bold">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </button>
 
             {/* scan icon */}
             <button aria-label="scan" onClick={() => setShowQRScanner(true)}>
               <svg
-                width="26"
-                height="26"
+                width="24"
+                height="24"
                 viewBox="0 0 26 26"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -787,6 +821,14 @@ const Dashboard: React.FC = () => {
           </motion.div>
         </div>
       )}
+
+      {/* Notification Panel */}
+      <NotificationPanel
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
+
+      <BottomNav />
     </div>
   );
 };
