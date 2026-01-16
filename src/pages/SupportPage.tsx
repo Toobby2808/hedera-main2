@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+//import { useAuth } from "../context/AuthContext";
 import {
   ArrowLeft,
   MessageCircle,
@@ -24,7 +24,7 @@ interface FAQItem {
 
 const SupportPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  //const { user } = useAuth();
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [messageSent, setMessageSent] = useState(false);

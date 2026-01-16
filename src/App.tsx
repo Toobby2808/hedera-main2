@@ -101,7 +101,7 @@ function App() {
                 {/* <Route path="/verify-code" element={<Screen4 />} /> */}
                 {/* <Route path="/signup" element={<Screen5 />} /> */}
                 <Route path="/login" element={<Screen6 />} />
-                <Route path="/register" element={<Register />} />
+                <Route path="/signup" element={<Register />} />
                 <Route path="/success" element={<Screen7 />} />
 
                 {/* Role selection route */}
