@@ -21,7 +21,7 @@ export default function Screen6() {
     /* hashConnectData, */
   } = useHashConnect();
 
-  const { setUser, setToken, logout } = useAuthContext();
+  const { setUser, login } = useAuthContext();
 
   // Form state
   const [email, setEmail] = useState("");
@@ -34,7 +34,7 @@ export default function Screen6() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Validation functions
-  const validateEmail = (email: string): boolean => {
+  /* const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
@@ -53,11 +53,30 @@ export default function Screen6() {
     }
 
     return null;
-  };
+  }; */
 
   // LOGIN FUNCTION
 
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    const result = await login({ email, password });
+
+    if (result.success) {
+      // Navigate to home - HomeRedirect component will handle role-based routing
+      navigate("/");
+    } else {
+      setError(result.error || "Login failed. Please try again.");
+    }
+  };
+
+  /* const handleLogin = async () => {
     logout();
     console.log("=== Starting Login ===");
 
@@ -163,7 +182,7 @@ export default function Screen6() {
       setIsLoading(false);
     }
   };
-
+ */
   /* const handleGoogleSignIn = () => {
     console.log("Google sign-in clicked");
     setError("Google sign-in is not yet implemented");
@@ -454,7 +473,7 @@ export default function Screen6() {
           className="w-full flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();
-            handleLogin();
+            handleLogin;
           }}
         >
           {/* Email Input */}
@@ -493,7 +512,7 @@ export default function Screen6() {
               disabled={isLoading}
               onKeyPress={(e) => {
                 if (e.key === "Enter") {
-                  handleLogin();
+                  handleLogin;
                 }
               }}
             />
