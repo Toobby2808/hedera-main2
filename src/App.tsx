@@ -1,6 +1,6 @@
 import { Provider } from "react-redux";
 import { store } from "./store";
-//import { useEffect } from "react";
+import { useEffect } from "react";
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
@@ -12,18 +12,14 @@ import Onboarding from "./onboarding/Onboarding";
 import "./App.css";
 
 // import { AuthScreen } from './page/screen3';
-//import Screen5 from "./onboarding/screen5";
+import Screen5 from "./onboarding/screen5";
 // import Screen4 from './onboarding/screen4';
 import Screen6 from "./onboarding/screen6";
 import Screen7 from "./onboarding/screen7";
 
-import { NotificationProvider } from "./context/NotificationContext";
-
-//import AppLayout from "./layouts/AppLayout";
+import AppLayout from "./layouts/AppLayout";
 
 import TransactionsPage from "./components/transactions/TransactionsPage";
-import ProtectedRoute from "./components/common/ProtectedRoute";
-import { useAuthContext, AuthProvider } from "./context/AuthContext";
 import BookRidePage from "./pages/app/bookride/BookRidePage";
 import AvailableRides from "./pages/app/bookride/AvailableRides";
 import RideDetailsPage from "./pages/app/bookride/RideDetailsPage";
@@ -37,176 +33,74 @@ import Dashboard from "./pages/Dashboard";
 import BookMarketplacePage from "./components/bookmarket/bookmarketplace";
 import BookDetailPage from "./components/bookmarket/bookDetailPage";
 import ReaderPage from "./components/bookmarket/components/readpage";
-import DriverDashboard from "./pages/DriverDashboard";
-import VehicleRegistration from "./pages/VehicleRegistration";
-import RoleSelection from "./pages/RoleSelection";
-import Register from "./pages/Register";
 function App() {
-  /* useEffect(() => {
+  useEffect(() => {
     const warmUp = async () => {
       try {
         await fetch("https://team-7-api.onrender.com", { cache: "no-store" });
-        console.log(" Backend warmed up and ready");
+        console.log("✅ Backend warmed up and ready");
       } catch (error) {
         console.log("⚠ Warm-up failed — backend may still be waking up");
       }
     };
     warmUp();
-  }, []); */
-
-  // Component to handle role-based home redirect
-  const HomeRedirect = () => {
-    const { user } = useAuthContext();
-
-    // If user has no role yet, redirect to role selection
-    if (!user?.role) {
-      return <Navigate to="/select-role" replace />;
-    }
-
-    if (user.role === "driver") {
-      return <DriverDashboard />;
-    }
-    return <Dashboard />;
-  };
-
-  // Component to check if user needs role selection
-  const RoleSelectionGuard = () => {
-    const { user, isAuthenticated } = useAuthContext();
-
-    if (!isAuthenticated) {
-      return <Navigate to="/onboarding" replace />;
-    }
-
-    // If user already has a role, redirect to home
-    if (user?.role) {
-      return <Navigate to="/" replace />;
-    }
-
-    return <RoleSelection />;
-  };
-
+  }, []);
   return (
-    <AuthProvider>
-      <Provider store={store}>
-        <NotificationProvider>
-          <BrowserRouter>
-            <div className="max-w-md mx-auto min-h-screen">
-              <Routes>
-                {/* Onboarding flow */}
-                {/* <Route path="/" element={<Screen1 />} />
+    // <Provider store={store}>
+    //   <BrowserRouter>
+    //     <Routes>
+    //       {/* Onboarding flow */}
+    //       <Route path="/" element={<Screen1 />} />
+    //       <Route path="/welcome" element={<Screen2 />} />
+    //       {/* <Route path="/auth" element={<AuthScreen />} /> */}
+    //       {/* <Route path="/verify-code" element={<Screen4 />} /> */}
+    //       <Route path="/signup" element={<Screen5 />} />
+    //       <Route path="/login" element={<Screen6 />} />
+    //       <Route path="/success" element={<Screen7 />} />
+
+    //       <Route path="*" element={<Navigate to="/" replace />} />
+    //     </Routes>
+    //   </BrowserRouter>
+
+    // </Provider>
+    <Provider store={store}>
+      <BrowserRouter>
+        <Routes>
+          {/* Onboarding flow */}
+          {/* <Route path="/" element={<Screen1 />} />
           <Route path="/welcome" element={<Screen2 />} /> */}
-                <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/" element={<Onboarding />} />
 
-                {/* <Route path="/auth" element={<AuthScreen />} /> */}
-                {/* <Route path="/verify-code" element={<Screen4 />} /> */}
-                {/* <Route path="/signup" element={<Screen5 />} /> */}
-                <Route path="/login" element={<Screen6 />} />
-                <Route path="/signup" element={<Register />} />
-                <Route path="/success" element={<Screen7 />} />
+          {/* <Route path="/auth" element={<AuthScreen />} /> */}
+          {/* <Route path="/verify-code" element={<Screen4 />} /> */}
+          <Route path="/signup" element={<Screen5 />} />
+          <Route path="/login" element={<Screen6 />} />
+          <Route path="/success" element={<Screen7 />} />
 
-                {/* Role selection route */}
-                <Route path="/select-role" element={<RoleSelectionGuard />} />
+          <Route path="/book-ride" element={<BookRidePage />} />
+          <Route path="/available-rides" element={<AvailableRides />} />
+          <Route path="/ride-details" element={<RideDetailsPage />} />
+          <Route path="/ride-payment" element={<MakePaymentPage />} />
+          <Route path="/ride-payment-success" element={<PaymentSuccess />} />
+          <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/edit-profile" element={<EditProfilePage />} />
+          <Route path="/book-market" element={<BookMarketplacePage />} />
+          <Route path="/reader/:id" element={<ReaderPage />} />
 
-                {/* Role-based home route */}
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute allowedRoles={["student", "driver"]}>
-                      <HomeRedirect />
-                    </ProtectedRoute>
-                  }
-                />
+          <Route path="/book/:id" element={<BookDetailPage />} />
 
-                {/* Profile (both roles) */}
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute allowedRoles={["student", "driver"]}>
-                      <ProfilePage />
-                    </ProtectedRoute>
-                  }
-                />
+          {/* APP ROUTES */}
+          <Route element={<AppLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/rewards" element={<RewardsPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/support" element={<SupportPage />} />
+          </Route>
 
-                {/* Ride History (both roles) */}
-                {/* <Route path="/ride-history" element={
-                <ProtectedRoute allowedRoles={['student', 'driver']}>
-                  <RideHistory />
-                </ProtectedRoute>
-              } /> */}
-
-                {/* Rewards page */}
-                <Route
-                  path="/rewards"
-                  element={
-                    <ProtectedRoute allowedRoles={["student", "driver"]}>
-                      <RewardsPage />
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Support page */}
-                <Route
-                  path="/support"
-                  element={
-                    <ProtectedRoute allowedRoles={["student", "driver"]}>
-                      <SupportPage />
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Driver routes */}
-                <Route
-                  path="/driver"
-                  element={
-                    <ProtectedRoute allowedRoles={["driver"]}>
-                      <DriverDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/vehicle-registration"
-                  element={
-                    <ProtectedRoute allowedRoles={["driver"]}>
-                      <VehicleRegistration />
-                    </ProtectedRoute>
-                  }
-                />
-
-                <Route path="/book-ride" element={<BookRidePage />} />
-                <Route path="/available-rides" element={<AvailableRides />} />
-                <Route path="/ride-details" element={<RideDetailsPage />} />
-                <Route path="/ride-payment" element={<MakePaymentPage />} />
-                <Route
-                  path="/ride-payment-success"
-                  element={<PaymentSuccess />}
-                />
-                <Route path="/transactions" element={<TransactionsPage />} />
-                <Route path="/edit-profile" element={<EditProfilePage />} />
-                <Route path="/book-market" element={<BookMarketplacePage />} />
-                <Route path="/reader/:id" element={<ReaderPage />} />
-
-                <Route path="/book/:id" element={<BookDetailPage />} />
-                <Route path="/driver" element={<DriverDashboard />} />
-                <Route
-                  path="/vehicle-registration"
-                  element={<VehicleRegistration />}
-                />
-
-                <Route path="/dashboard" element={<Dashboard />} />
-                {/* APP ROUTES */}
-                {/* <Route element={<AppLayout />}>
-                <Route path="/rewards" element={<RewardsPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/support" element={<SupportPage />} />
-              </Route>
- */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </div>
-          </BrowserRouter>
-        </NotificationProvider>
-      </Provider>
-    </AuthProvider>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </Provider>
   );
 }
 

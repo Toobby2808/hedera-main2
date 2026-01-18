@@ -177,7 +177,7 @@ export default function Screen5() {
 
       console.log("🎉 User saved successfully:", userData);
 
-      navigate("/select-role", {
+      navigate("/success", {
         state: {
           message: "Registration successful! Welcome to Hedera.",
           user: userData,
@@ -196,6 +196,11 @@ export default function Screen5() {
       console.log("=== Registration Process Completed ===");
     }
   };
+
+  /* const handleGoogleSignIn = () => {
+    console.log("Google sign-in clicked");
+    setError("Google sign-in is not yet implemented");
+  }; */
 
   //  Hedera Wallet Connection Handler
 
@@ -288,8 +293,6 @@ export default function Screen5() {
         preferences: {},
       });
 
-      window.dispatchEvent(new Event("user-updated"));
-
       // ✅ Success navigation
       navigate("/success", {
         state: {
@@ -327,7 +330,7 @@ export default function Screen5() {
   };
 
   return (
-    <div className="h-screen max-w-md mx-auto bg-linear-to-br from-emerald-50 to-teal-50 w-full px-4 py-12 flex flex-col justify-between overflow-y-auto">
+    <div className="h-screen bg-linear-to-br from-emerald-50 to-teal-50 w-full px-4 py-12 flex flex-col justify-between overflow-y-auto">
       <div>
         <Back
           /* image={backarrow} */

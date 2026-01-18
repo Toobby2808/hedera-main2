@@ -45,9 +45,7 @@ const BottomNav = () => {
   const isActive = (path: string) => {
     if (path === "/") {
       // Consider both '/' and '/driver' as home for active state
-      return (
-        location.pathname === "/dashboard" || location.pathname === "/driver"
-      );
+      return location.pathname === "/" || location.pathname === "/driver";
     }
     return location.pathname === path;
   };
